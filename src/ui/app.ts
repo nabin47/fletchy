@@ -565,6 +565,11 @@ export class FletchyApp {
     return {
       screen: () => this.screen,
       back: () => this.back(),
+      advance: (seconds: number) => {
+        const s = this.session;
+        if (s?.kind !== 'rush') return;
+        for (let t = 0; t < seconds && !s.game.over; t += 0.1) s.game.tick(0.1);
+      },
       startRush: (seed?: number) => this.startRush(seed),
       startDaily: () => this.startDaily(),
       skipTutorial: () => this.finishTutorial(),

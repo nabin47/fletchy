@@ -51,3 +51,10 @@
 - **Identity in Gradle.** `android/app/build.gradle` reads `appId` and `version` from `app.config.json`. The release workflow sets `ANDROID_VERSION_NAME` (from the tag) and `ANDROID_VERSION_CODE` (run number + 100). Signing is read from env vars only when `ANDROID_KEYSTORE_PATH` is set.
 - **Release status defaults to `draft`.** Play rejects `completed` releases while the app itself is still a draft in Play Console. Switch to `completed` in the manual run once the app is set up.
 - **CI triggers.** `ci.yml` and `android-debug.yml` now run on pull requests and pushes to `main` (not every branch push), so a PR no longer runs everything twice.
+
+## Launch prep (Phase 4)
+
+- **Store screenshots are 1080x1920 (9:16).** The 390x844 and 360x800 smoke-test screenshots are taller than 2:1, which Play rejects. `tests/e2e/store.spec.ts` captures dedicated shots at 405x720 CSS px with a 2.667 device scale factor. Captions are added by sharp (no design tool) and come from `app.config.json` like every other store string.
+- **Generated, not committed.** `store/build/` is rebuilt by CI on every run and uploaded as the `store-listing` artifact. Only the source (SVG, config, script) is in git, so text and screenshots can never drift from the game.
+- **Target audience 13+.** Selecting under-13 age groups would bring in the Families policy. The game is general-audience, so the answers in `store/DATA_SAFETY.md` exclude those groups.
+- **Store badges on the web page** wait until the listing is live (Phase 4 has nothing to link to yet).

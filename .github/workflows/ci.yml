@@ -38,6 +38,14 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Build store listing assets (icon, feature graphic, captioned screenshots, text)
+        run: npm run store
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-listing
+          path: store/build
+          if-no-files-found: error
+          retention-days: 90
       - uses: actions/upload-artifact@v7
         if: always()
         with:
