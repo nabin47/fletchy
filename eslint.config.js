@@ -11,4 +11,9 @@ export default tseslint.config(
       globals: { ...globals.browser, ...globals.node },
     },
   },
+  {
+    // Tests may assert presence with `!`; a wrong assumption just fails the test.
+    files: ['tests/**/*.ts'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
 );
