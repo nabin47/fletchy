@@ -53,7 +53,7 @@ export const DAILY = {
   hearts: 3,
   salt: 'fletchy-daily-v1',
   /** Puzzle #1 is this UTC date. */
-  epoch: '2026-11-01',
+  epoch: '2026-10-25',
   /** Par time in seconds per arrow on the board (3 stars = no mistakes and under par). */
   parPerArrow: 1.6,
   placement: { len2Prob: 0.45, len3Prob: 0.3, chainBias: 0.6 },

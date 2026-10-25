@@ -13,6 +13,10 @@
 | `eslint`, `@eslint/js`, `typescript-eslint`, `globals` (dev) | Required lint check. |
 | `@types/node` (dev) | Types for config files and scripts that run in Node. |
 | `sharp` (dev) | Renders the SVG artwork to PNG icons and splash screens. |
+| `@capacitor/app` | Native back button and app pause events. |
+| `@capacitor/haptics` | Native haptics (web falls back to `navigator.vibrate`). |
+| `@capacitor/preferences` | Native key-value storage that the OS will not evict like WebView storage (web uses `localStorage`). |
+| `@capacitor/share` | Native share sheet for Daily results (web uses the Web Share API, then the clipboard). |
 
 `@capacitor/assets` is **not** a dependency: it pins old versions of `sharp` and `@capacitor/cli`, so `bootstrap.yml` runs it once with `npx --yes @capacitor/assets@3.0.5`.
 
@@ -32,3 +36,10 @@
 - **`node scripts/sim.ts` without a TS runner.** Node 22.18+ strips types natively, so core imports use explicit `.ts` extensions (`allowImportingTsExtensions`, `erasableSyntaxOnly` in tsconfig). That avoids adding `tsx` or `ts-node`.
 - **Wave size grows past 3.** The plan says waves of 1 to 3 arrows. With a 1.4 s spawn floor, a fast player clears 3 arrows faster than they arrive, so the perfect bot would never lose. Wave size starts at 1-3 and slowly grows (`waveSizeRange` in `config.ts`). The sim confirms every bot is eventually overwhelmed.
 - **Bot model.** Each bot taps after `reaction + scanPerArrow * arrowsOnBoard` seconds (reading a busy board takes longer). With probability `errorRate` it taps a blocked arrow.
+
+## Web game (Phase 2)
+
+- **No PWA plugin.** A ~40-line Vite plugin in `vite.config.ts` generates `manifest.webmanifest`, `privacy.html` (from `resources/privacy.template.html`) and a precaching `sw.js`. Name, colours and repo all come from `app.config.json`. The service worker is registered only on the web build, never inside the native apps.
+- **Daily epoch = 2026-10-25.** Puzzle #1 is the day Phase 2 was built. Changing the epoch renumbers every puzzle, so treat it as fixed from now on.
+- **Status bar / splash plugins deferred to Phase 3** together with the other native polish (edge-to-edge, back-gesture test).
+- **Test hook.** `window.__fletchy.debug` lets Playwright drive the game: real pointer taps on a free arrow's centre, plus helpers for wrong taps and reading state. It is harmless in production (it can only do what a player can).
