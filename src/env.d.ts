@@ -5,6 +5,8 @@ declare const __APP_WEB_URL__: string;
 /** Test hook used by the Playwright smoke test (window.__fletchy.debug). */
 interface FletchyDebug {
   screen(): string;
+  /** Same as the Android back button; false means the app would exit. */
+  back(): boolean;
   startRush(seed?: number): void;
   startDaily(): void;
   skipTutorial(): void;

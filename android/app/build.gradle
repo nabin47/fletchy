@@ -1,14 +1,19 @@
 apply plugin: 'com.android.application'
 
+// Fletchy: identity comes from app.config.json (single source of truth).
+// CI overrides the version with ANDROID_VERSION_CODE / ANDROID_VERSION_NAME.
+def appConfig = new groovy.json.JsonSlurper().parse(file('../../app.config.json'))
+def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+
 android {
     namespace = "io.github.nabin47.fletchy"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.nabin47.fletchy"
+        applicationId appConfig.appId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode((System.getenv('ANDROID_VERSION_CODE') ?: '1').toInteger())
+        versionName(System.getenv('ANDROID_VERSION_NAME') ?: appConfig.version)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +21,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            // Only the release workflow sets these; the keystore never lives in the repo.
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            debuggable false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystorePath) signingConfig signingConfigs.release
         }
     }
 }

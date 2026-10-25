@@ -41,5 +41,13 @@
 
 - **No PWA plugin.** A ~40-line Vite plugin in `vite.config.ts` generates `manifest.webmanifest`, `privacy.html` (from `resources/privacy.template.html`) and a precaching `sw.js`. Name, colours and repo all come from `app.config.json`. The service worker is registered only on the web build, never inside the native apps.
 - **Daily epoch = 2026-10-25.** Puzzle #1 is the day Phase 2 was built. Changing the epoch renumbers every puzzle, so treat it as fixed from now on.
-- **Status bar / splash plugins deferred to Phase 3** together with the other native polish (edge-to-edge, back-gesture test).
 - **Test hook.** `window.__fletchy.debug` lets Playwright drive the game: real pointer taps on a free arrow's centre, plus helpers for wrong taps and reading state. It is harmless in production (it can only do what a player can).
+
+## Android (Phase 3)
+
+- **No INTERNET permission.** Capacitor serves the game from inside the APK through an intercepted `https://localhost` origin, so no socket is ever opened. The manifest marks the permission `tools:node="remove"` so no library can merge it back. The emulator test checks that the installed app requests no INTERNET permission and still boots.
+- **No status-bar or splash-screen plugin.** Capacitor 8's built-in `SystemBars` handles edge-to-edge (`insetsHandling: 'css'` injects `--safe-area-inset-*`, used with an `env()` fallback). It also handles the status/navigation bar icon style, which follows the theme. The Android 12+ system splash (icon on the background colour) is enough; `@capacitor/splash-screen` is not needed.
+- **Back button and predictive back (targetSdk 36).** `@capacitor/app` registers an `OnBackPressedCallback`, which still works when predictive back is on. Behaviour: in-game back opens the pause menu; back on pause resumes; back in the tutorial skips it; back on other screens returns to the menu; back on the menu exits. **Test result:** the `emulator` job in `android-debug.yml` boots an API 36 emulator and runs `scripts/android-smoke.sh`, which presses KEYCODE_BACK and follows `[fletchy] screen=` lines in logcat. The Playwright smoke test covers the same logic on the web.
+- **Identity in Gradle.** `android/app/build.gradle` reads `appId` and `version` from `app.config.json`. The release workflow sets `ANDROID_VERSION_NAME` (from the tag) and `ANDROID_VERSION_CODE` (run number + 100). Signing is read from env vars only when `ANDROID_KEYSTORE_PATH` is set.
+- **Release status defaults to `draft`.** Play rejects `completed` releases while the app itself is still a draft in Play Console. Switch to `completed` in the manual run once the app is set up.
+- **CI triggers.** `ci.yml` and `android-debug.yml` now run on pull requests and pushes to `main` (not every branch push), so a PR no longer runs everything twice.
