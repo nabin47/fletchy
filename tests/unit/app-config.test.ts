@@ -19,3 +19,29 @@ describe('app.config.json', () => {
     expect(JSON.stringify(app)).not.toMatch(/arrow\s*rush/i);
   });
 });
+
+describe('store listing text (Google Play limits)', () => {
+  const store = app.store as {
+    shortDescription: string;
+    fullDescription: string;
+    releaseNotes: string;
+    screenshots: { shot: string; caption: string }[];
+  };
+
+  it('fits the Play Console limits', () => {
+    expect(String(app.storeTitle).length).toBeLessThanOrEqual(30);
+    expect(store.shortDescription.length).toBeLessThanOrEqual(80);
+    expect(store.fullDescription.length).toBeLessThanOrEqual(4000);
+    expect(store.releaseNotes.length).toBeLessThanOrEqual(500);
+  });
+
+  it('has at least 4 captioned screenshots', () => {
+    expect(store.screenshots.length).toBeGreaterThanOrEqual(4);
+    for (const s of store.screenshots) expect(s.caption.length).toBeLessThanOrEqual(40);
+  });
+
+  it('keeps the mode names', () => {
+    expect(store.fullDescription).toContain('RUSH');
+    expect(store.fullDescription).toContain('DAILY GRID');
+  });
+});

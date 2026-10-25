@@ -16,6 +16,7 @@
     "test:e2e": "playwright test",
     "sim": "node scripts/sim.ts",
     "icons": "node scripts/make-icons.mjs",
+    "store": "node scripts/make-store-assets.mjs",
     "android:customize": "node scripts/android-customize.mjs"
   },
   "dependencies": {

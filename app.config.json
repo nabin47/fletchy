@@ -9,7 +9,32 @@
   "themeColor": "#14161f",
   "backgroundColor": "#14161f",
   "store": {
+    "category": "Puzzle",
     "shortDescription": "Tap arrows off the board before it fills up. One tap, endless puzzles.",
-    "fullDescription": "TODO (Phase 4)"
+    "fullDescription": "Fletchy is a one-tap puzzle game about arrows and the paths they need.\n\nEvery arrow points somewhere. Tap one and it flies off the board, but only if nothing is in its way. Tap a blocked arrow and it bumps, and you lose a heart. Read the board, find the arrow that is free, and clear the way.\n\nRUSH: ENDLESS SURVIVAL\nNew arrows keep arriving in waves. Clear them quickly to build combos and multiply your score, and keep an eye on the pressure ring: if the board fills up, the round is over. Clear a whole wave without a mistake to win back a heart. Rounds last about a minute, and the next one is a single tap away.\n\nDAILY GRID: ONE PUZZLE A DAY\nEveryone in the world gets the same board each day. Clear it with no mistakes and under par for three stars, share your time with friends, and keep your streak going.\n\nWHY YOU WILL KEEP PLAYING\n• Every board is freshly generated and always solvable\n• Learn it in 30 seconds, then keep finding smarter routes\n• Satisfying feedback: slides, bursts, rising combo sounds and vibration\n• Hints when you are stuck (3 per day)\n• Colorblind-friendly colors, light and dark themes, and a reduced-motion option\n• Works fully offline\n\nNo account, no ads, no tracking. Fletchy collects no personal data; your progress stays on your device.",
+    "releaseNotes": "First release: endless Rush mode, a new Daily Grid puzzle every day, hints, a quick tutorial, and colorblind, theme and reduced-motion options.",
+    "featureTagline": "One tap. Endless puzzles.",
+    "screenshots": [
+      {
+        "shot": "rush",
+        "caption": "One tap sends an arrow flying"
+      },
+      {
+        "shot": "rush-busy",
+        "caption": "Clear the path before the board fills up"
+      },
+      {
+        "shot": "daily",
+        "caption": "A new Daily Grid every day"
+      },
+      {
+        "shot": "daily-result",
+        "caption": "Share your time, keep your streak"
+      },
+      {
+        "shot": "gameover",
+        "caption": "Beat your best. Then beat it again."
+      }
+    ]
   }
 }
