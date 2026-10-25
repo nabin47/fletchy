@@ -23,3 +23,12 @@
 - **Bootstrap PR has no CI checks.** Pushes made with `GITHUB_TOKEN` do not trigger workflows, so the bootstrap PR shows no checks; CI runs on `main` after merge. (A PAT would avoid this but is not worth the extra secret.)
 - **Phase branches.** Claude Code sessions develop on a session branch (`claude/...`) instead of `phase-N`; there is still one PR per phase.
 - **Android SDK levels.** Capacitor 8.5's template already uses minSdk 24 / compileSdk 36 / targetSdk 36 with AGP 8.13 and Gradle 8.14.3; `android-customize.mjs` asserts these values.
+
+## Engine (Phase 1)
+
+- **Lane = whole ray to the edge.** Arrow A depends on B if B occupies *any* cell between A's head and the edge, not only the nearest one. That makes "A is free" exactly "A has no dependencies", so a cycle-free graph always has a free arrow.
+- **Cycle check on insert.** A new arrow N adds edges N -> (arrows in N's lane) and A -> N (arrows whose lane crosses N). A cycle appears iff one of N's dependencies can reach one of N's dependents; a DFS over the existing graph checks that.
+- **Exhaustive fallback.** The generator tries random placements first and, if none work, scans every (cell, direction, length) placement. So "no valid placement exists" (the Rush overflow condition) is exact, not a guess.
+- **`node scripts/sim.ts` without a TS runner.** Node 22.18+ strips types natively, so core imports use explicit `.ts` extensions (`allowImportingTsExtensions`, `erasableSyntaxOnly` in tsconfig). That avoids adding `tsx` or `ts-node`.
+- **Wave size grows past 3.** The plan says waves of 1 to 3 arrows. With a 1.4 s spawn floor, a fast player clears 3 arrows faster than they arrive, so the perfect bot would never lose. Wave size starts at 1-3 and slowly grows (`waveSizeRange` in `config.ts`). The sim confirms every bot is eventually overwhelmed.
+- **Bot model.** Each bot taps after `reaction + scanPerArrow * arrowsOnBoard` seconds (reading a busy board takes longer). With probability `errorRate` it taps a blocked arrow.

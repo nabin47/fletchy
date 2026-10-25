@@ -25,6 +25,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Bot balance sim (results in the run summary)
+        run: npm run sim
       - run: npm run build
       - uses: actions/upload-artifact@v7
         with:
