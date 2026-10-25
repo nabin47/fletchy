@@ -44,7 +44,7 @@ describe('Daily Grid', () => {
 
   it('numbers puzzles from the epoch', () => {
     expect(puzzleNumber(DAILY.epoch)).toBe(1);
-    expect(puzzleNumber('2026-11-12')).toBe(12);
+    expect(puzzleNumber('2026-11-05')).toBe(12);
   });
 
   it('a clean fast solve earns 3 stars', () => {
