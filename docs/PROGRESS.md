@@ -15,7 +15,7 @@
 - [x] Bot balance sim (`npm run sim`) in the CI run summary
 - [x] CI green on the Phase 1 PR (run 40177349397)
 
-## Phase 2: Playable web game (in progress)
+## Phase 2: Playable web game (done, PR #5)
 
 - [x] Canvas renderer (devicePixelRatio, safe areas), pointer input, arrowhead shapes for direction
 - [x] Juice: ease-in slide-off, particles, bump + blocker flash, screen shake, score popups, rising combo pitch (WebAudio), haptics
@@ -25,4 +25,13 @@
 - [x] Storage (Preferences on native, localStorage on web), auto-pause on visibilitychange and app pause, back button handling
 - [x] PWA: generated manifest, precaching service worker, privacy page
 - [x] Playwright smoke test through every screen, screenshots at 390x844 and 360x800
-- [ ] CI green, then play-test on phone via Pages
+- [x] CI green (run 40178696612); deployed to Pages and play-tested on a phone
+
+## Phase 3: Android build and release pipeline (in progress)
+
+- [x] Native polish: identity/version from `app.config.json` in Gradle, R8 + resource shrinking, no permissions, portrait, edge-to-edge via Capacitor SystemBars + safe-area CSS, status bar style follows the theme
+- [x] Back button: in-game pauses, back from pause resumes, tutorial skips, menu exits (Playwright logic test + API 36 emulator test)
+- [x] `create-upload-key.yml`, `android-release.yml` (signed AAB artifact, optional Play upload)
+- [x] `docs/RELEASE.md` checklist
+- [ ] CI green on the Phase 3 PR (including the emulator job)
+- [ ] Signed AAB from a tagged run (blocked on the owner: `ADMIN_PAT`, see docs/RELEASE.md)

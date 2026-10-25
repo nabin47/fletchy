@@ -12,6 +12,14 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    // Android 15+ (target 36) is always edge-to-edge. Capacitor injects --safe-area-inset-* CSS vars.
+    SystemBars: {
+      insetsHandling: 'css',
+      initialViewportFitValueHint: 'cover',
+      style: 'DARK',
+    },
+  },
 };
 
 export default config;

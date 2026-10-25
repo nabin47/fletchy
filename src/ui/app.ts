@@ -6,6 +6,7 @@ import { RushGame } from '../core/rush.ts';
 import { comboMultiplier } from '../core/scoring.ts';
 import { errorHaptic, setHapticsEnabled, successHaptic, tapHaptic } from '../platform/haptics.ts';
 import { initLifecycle } from '../platform/lifecycle.ts';
+import { setSystemBarsDark } from '../platform/systembars.ts';
 import { shareText as shareNative } from '../platform/share.ts';
 import { Sound } from './audio.ts';
 import { progress, type Settings } from './progress.ts';
@@ -130,6 +131,7 @@ export class FletchyApp {
     this.sound.enabled = s.sound;
     setHapticsEnabled(s.haptics);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.renderer.palette.bg);
+    setSystemBarsDark(dark);
   }
 
   // ---------- sessions ----------
@@ -345,6 +347,8 @@ export class FletchyApp {
     this.el.overlay.innerHTML = overlayHtml;
     this.el.overlay.className = overlayHtml ? 'open' : '';
     document.body.dataset.screen = screen;
+    // One line per screen change; the Android emulator test follows these in logcat.
+    console.info(`[fletchy] screen=${screen}`);
     this.hudKey = '';
     requestAnimationFrame(() => this.resize());
     (this.el.overlay.querySelector<HTMLElement>('[autofocus]') ?? null)?.focus();
@@ -560,6 +564,7 @@ export class FletchyApp {
     };
     return {
       screen: () => this.screen,
+      back: () => this.back(),
       startRush: (seed?: number) => this.startRush(seed),
       startDaily: () => this.startDaily(),
       skipTutorial: () => this.finishTutorial(),

@@ -49,7 +49,7 @@ body {
   inset: 0;
   display: flex;
   flex-direction: column;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: var(--safe-area-inset-top, env(safe-area-inset-top)) var(--safe-area-inset-right, env(safe-area-inset-right)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom)) var(--safe-area-inset-left, env(safe-area-inset-left));
 }
 
 #hud {
@@ -254,7 +254,7 @@ button.big em {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  padding: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 16px) 16px calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom)) + 16px);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   overflow-y: auto;
 }

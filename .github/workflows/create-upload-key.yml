@@ -1,0 +1,66 @@
+name: Create upload key
+
+# Run once. Generates the Android *upload* keystore with random passwords and
+# writes it straight into repo secrets. Nothing is printed or uploaded.
+# Play App Signing holds the real app signing key, so a lost upload key can be reset by Google.
+# Needs secret ADMIN_PAT: a fine-grained token for this repo with "Secrets: read and write".
+
+on:
+  workflow_dispatch:
+    inputs:
+      overwrite:
+        description: Replace an existing upload key (only if Google has reset it for you)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: create-upload-key
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Generate keystore and store it as secrets
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_PAT }}
+          OVERWRITE: ${{ inputs.overwrite }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Secret ADMIN_PAT is missing. See docs/RELEASE.md."
+            exit 1
+          fi
+          if gh secret list --repo "$REPO" --json name --jq '.[].name' | grep -qx ANDROID_KEYSTORE_BASE64 && [ "$OVERWRITE" != "true" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 already exists. Re-run with overwrite=true only if you really want a new upload key."
+            exit 1
+          fi
+          umask 077
+          dir=$(mktemp -d)
+          trap 'rm -rf "$dir"' EXIT
+          pass=$(openssl rand -hex 24)
+          echo "::add-mask::$pass"
+          alias=upload
+          name=$(node -p "require('./app.config.json').name" 2>/dev/null || echo App)
+          # PKCS12 keystores use one password for the store and the key.
+          keytool -genkeypair -keystore "$dir/upload.jks" -storetype PKCS12 -alias "$alias" \
+            -keyalg RSA -keysize 4096 -validity 10000 -storepass "$pass" -keypass "$pass" \
+            -dname "CN=$name upload key, O=$GITHUB_REPOSITORY_OWNER" >/dev/null 2>&1
+          base64 -w0 "$dir/upload.jks" | gh secret set ANDROID_KEYSTORE_BASE64 --repo "$REPO"
+          printf '%s' "$pass" | gh secret set ANDROID_KEYSTORE_PASSWORD --repo "$REPO"
+          printf '%s' "$pass" | gh secret set ANDROID_KEY_PASSWORD --repo "$REPO"
+          printf '%s' "$alias" | gh secret set ANDROID_KEY_ALIAS --repo "$REPO"
+          # The certificate fingerprint is public information (Play Console shows it too).
+          fp=$(keytool -list -v -keystore "$dir/upload.jks" -storepass "$pass" -alias "$alias" | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
+          {
+            echo "### Upload key created"
+            echo "Secrets set: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS"
+            echo ""
+            echo "Upload certificate SHA-256: \`$fp\`"
+          } >> "$GITHUB_STEP_SUMMARY"

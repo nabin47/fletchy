@@ -117,3 +117,20 @@ test('offline assets are served', async ({ request }) => {
   expect(manifest.name).toBe('Fletchy');
   expect(manifest.start_url).toBe('./');
 });
+
+test('back button: tutorial skips, in-game pauses, menu exits', async ({ page }) => {
+  await page.goto('./');
+  await page.waitForFunction(() => window.__fletchy?.ready === true);
+  const back = (): Promise<boolean> => page.evaluate(() => window.__fletchy?.debug?.back() ?? false);
+  expect(await screen(page)).toBe('playing'); // tutorial
+  expect(await back()).toBe(true);
+  expect(await screen(page)).toBe('menu');
+  await page.evaluate(() => window.__fletchy?.debug?.startRush(1));
+  expect(await back()).toBe(true);
+  expect(await screen(page)).toBe('pause');
+  expect(await back()).toBe(true);
+  expect(await screen(page)).toBe('playing');
+  await page.evaluate(() => window.__fletchy?.debug?.back());
+  await page.getByRole('button', { name: 'Menu' }).click();
+  expect(await back()).toBe(false); // the native shell exits the app
+});

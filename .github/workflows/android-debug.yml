@@ -2,7 +2,9 @@ name: Android debug
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,24 +25,55 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Generate android/ if the bootstrap PR is not merged yet
-        if: hashFiles('android/build.gradle') == ''
+      - name: Check native customizations are applied (no-op on the committed project)
         run: |
-          echo "::warning::android/ is not committed yet; generating a temporary project. Run the Bootstrap workflow."
-          npx cap add android
           npm run android:customize
+          git diff --exit-code -- android/ || { echo "::error::android/ differs from scripts/android-customize.mjs output; run it and commit"; exit 1; }
       - run: npx cap sync android
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Assemble debug APK
+      - name: Assemble debug APK and an unsigned release bundle (checks R8)
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug bundleRelease --no-daemon
       - uses: actions/upload-artifact@v7
         with:
           name: fletchy-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
+
+  emulator:
+    needs: assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: fletchy-debug-apk
+          path: apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot API 36 emulator and run the smoke test
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: bash scripts/android-smoke.sh apk/app-debug.apk emulator-results
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: emulator-results
+          path: emulator-results
+          if-no-files-found: ignore
           retention-days: 14
