@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Adaptive icon foreground: art scaled into the central safe zone (66%). -->
+  <g transform="translate(512 512) scale(0.72) translate(-512 -512)">
+  <g transform="rotate(-45 512 512)">
+    <path d="M196 512 L148 420 L236 420 L284 512 Z" fill="#ff6b5a"/>
+    <path d="M196 512 L148 604 L236 604 L284 512 Z" fill="#e5533f"/>
+    <path d="M276 512 L228 420 L316 420 L364 512 Z" fill="#ff6b5a"/>
+    <path d="M276 512 L228 604 L316 604 L364 512 Z" fill="#e5533f"/>
+    <rect x="200" y="488" width="520" height="48" rx="24" fill="#f3f1ea"/>
+    <path d="M690 400 L846 512 L690 624 Q712 512 690 400 Z" fill="#ffb845"/>
+  </g>
+  </g>
+</svg>
