@@ -66,6 +66,18 @@ test('store screenshots', async ({ page }) => {
   await page.waitForTimeout(500);
   await shot(page, 'daily');
 
+  // A boss level, a few arrows in.
+  await dbg(page, (d) => d.startLevel(10));
+  await page.waitForTimeout(400);
+  for (let i = 0; i < 6; i++) {
+    await tapFree(page);
+    await page.waitForTimeout(120);
+  }
+  await page.waitForTimeout(500);
+  await shot(page, 'levels');
+  await dbg(page, (d) => d.startDaily());
+  await expect.poll(() => dbg(page, (d) => d.state().kind)).toBe('daily');
+
   // Daily result.
   await expect
     .poll(async () => {

@@ -11,6 +11,7 @@ interface FletchyDebug {
   advance(seconds: number): void;
   startRush(seed?: number): void;
   startDaily(): void;
+  startLevel(level?: number): void;
   skipTutorial(): void;
   freeArrowCenter(): { x: number; y: number } | null;
   tapFree(): boolean;

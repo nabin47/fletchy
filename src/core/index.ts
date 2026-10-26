@@ -3,6 +3,7 @@ export * from './daily.ts';
 export * from './dependency.ts';
 export * from './generator.ts';
 export * from './grid.ts';
+export * from './levels.ts';
 export * from './rng.ts';
 export * from './rules.ts';
 export * from './rush.ts';

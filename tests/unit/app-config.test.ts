@@ -43,5 +43,6 @@ describe('store listing text (Google Play limits)', () => {
   it('keeps the mode names', () => {
     expect(store.fullDescription).toContain('RUSH');
     expect(store.fullDescription).toContain('DAILY GRID');
+    expect(store.fullDescription).toContain('LEVELS');
   });
 });

@@ -81,3 +81,39 @@ export const DAILY = {
   parPerArrow: 1.6,
   placement: { len2Prob: 0.45, len3Prob: 0.3, chainBias: 0.6 },
 };
+
+export const LEVELS = {
+  hearts: 3,
+  salt: 'fletchy-level-v1',
+  /** Every Nth level is a boss level: a bigger board with longer, more tangled arrows. */
+  bossEvery: 5,
+  minCols: 8,
+  maxCols: 14,
+};
+
+export interface LevelSpec {
+  level: number;
+  boss: boolean;
+  cols: number;
+  rows: number;
+  fill: number;
+  maxLen: number;
+  bendProb: number;
+  chainBias: number;
+}
+
+/** Board size and arrow style for a level. Grows slowly; boss levels jump ahead. */
+export function levelSpec(level: number): LevelSpec {
+  const boss = level % LEVELS.bossEvery === 0;
+  const cols = Math.min(LEVELS.maxCols, LEVELS.minCols + Math.floor((level - 1) / 5) + (boss ? 3 : 0));
+  return {
+    level,
+    boss,
+    cols,
+    rows: Math.round(cols * 1.5),
+    fill: Math.min(0.95, 0.8 + 0.006 * level + (boss ? 0.04 : 0)),
+    maxLen: Math.min(16, 4 + Math.floor(level / 3) + (boss ? 4 : 0)),
+    bendProb: Math.min(0.55, 0.3 + 0.01 * level),
+    chainBias: Math.min(0.8, 0.1 + 0.02 * level + (boss ? 0.2 : 0)),
+  };
+}

@@ -91,7 +91,27 @@ for (const vp of viewports) {
     await page.waitForTimeout(400);
     await shot(page, '06-daily-result', vp);
 
+    // Levels: clear level 1, move on to level 2.
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.getByRole('button', { name: /Levels/ }).click();
+    await page.waitForTimeout(400);
+    await shot(page, '08-level', vp);
+    await tapFreeArrow(page);
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => window.__fletchy?.debug?.tapFree());
+          return page.evaluate(() => window.__fletchy?.debug?.state().over ?? null);
+        },
+        { timeout: 30_000, intervals: [50] },
+      )
+      .toBe('done');
+    await expect(page.getByText('Level 1 cleared')).toBeVisible();
+    await page.getByRole('button', { name: 'Next level' }).click();
+    await expect(page.getByText('Level 2', { exact: true })).toBeVisible();
+
     // Settings.
+    await page.getByRole('button', { name: 'Pause' }).click();
     await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByRole('button', { name: /Sound/ })).toBeVisible();
@@ -103,6 +123,7 @@ for (const vp of viewports) {
     await page.waitForFunction(() => window.__fletchy?.ready === true);
     await expect(page.getByRole('button', { name: /Rush/ })).toContainText('Best');
     await expect(page.getByRole('button', { name: /Daily Grid/ })).toContainText('Done today');
+    await expect(page.getByRole('button', { name: /Levels/ })).toContainText('2');
 
     expect(errors).toEqual([]);
   });
