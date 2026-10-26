@@ -46,7 +46,6 @@ const en = {
   themeSystem: 'System',
   themeDark: 'Dark',
   themeLight: 'Light',
-  colorblind: 'Colorblind-safe colors',
   reduceMotion: 'Reduce motion',
   replayTutorial: 'Replay tutorial',
   privacy: 'Privacy',

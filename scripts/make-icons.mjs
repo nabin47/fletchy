@@ -19,7 +19,7 @@ await render('icon.svg', res('icon-only.png'), 1024);
 await render('icon-foreground.svg', res('icon-foreground.png'), 1024);
 await render('icon-background.svg', res('icon-background.png'), 1024);
 await render('splash.svg', res('splash.png'), 2732);
-await render('splash.svg', res('splash-dark.png'), 2732);
+await render('splash-dark.svg', res('splash-dark.png'), 2732);
 
 // Web / PWA icons.
 await render('icon.svg', pub('icons/icon-192.png'), 192);

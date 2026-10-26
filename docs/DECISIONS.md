@@ -58,3 +58,12 @@
 - **Generated, not committed.** `store/build/` is rebuilt by CI on every run and uploaded as the `store-listing` artifact. Only the source (SVG, config, script) is in git, so text and screenshots can never drift from the game.
 - **Target audience 13+.** Selecting under-13 age groups would bring in the Families policy. The game is general-audience, so the answers in `store/DATA_SAFETY.md` exclude those groups.
 - **Store badges on the web page** wait until the listing is live (Phase 4 has nothing to link to yet).
+
+## Feel and look rework (after the first play-test)
+
+Owner feedback: too easy (waiting for waves after clearing the board), arrows too big on too small a grid (looked made for young children), and too many colours.
+
+- **Dynamic difficulty.** Rush no longer runs on a fixed wave timer. A difficulty *level* rises with time (0.2 per second). It also gains 0.25 every time the player clears the board below `minOnBoard(level)`, which pulls the next wave in after 0.35 s. Nobody waits on an empty board, and fast players climb the curve faster. The level sets the arrival rate (0.55 arrows/s × 1.025^level), wave spacing, arrow length and `chainBias`. The plan's "+200 and 2 s delay" on a board clear is now "+200 and the next wave arrives at once". Sim (100 games per bot): beginner about 67 s mean, casual 110 s, skilled 158 s, perfect bot overwhelmed at about 189 s.
+- **Bigger grid, thinner arrows.** Rush and Daily are 9×13 (the plan said 7×10 and 8×10). Arrows are a thin shaft plus a small head on a 6% tile. Cells are about 41 px wide on a 390 px phone, below the plan's 44 dp touch target. To compensate, a tap on an empty cell picks the nearest arrow cell within 0.8 cells (`Renderer.arrowAt`). Long arrows (2-3 cells) are most of the board, so the effective target is larger.
+- **Minimal palette.** Every arrow is one ink colour; the arrowhead shape shows direction. There is one muted sage accent and a muted red only for mistakes. Light is the default (warm off-white `#f4f2ee`, ink `#34363c`), with a matching soft dark theme. The **colorblind option was removed**: with monochrome arrows and shape-coded direction, nothing depends on telling colours apart. Icon, splash, store art and privacy page use the same palette.
+- **Daily boards changed** with the new size, so every date now has a different puzzle than before. This happened before launch, and puzzle numbers are unchanged.

@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
   <!-- Splash: centred mark on the app background. Keep art inside the middle ~1000px. -->
-  <rect width="2732" height="2732" fill="#14161f"/>
-  <g transform="translate(1366 1366) scale(0.8) translate(-512 -512)">
-  <g transform="rotate(-45 512 512)">
-    <path d="M196 512 L148 420 L236 420 L284 512 Z" fill="#ff6b5a"/>
-    <path d="M196 512 L148 604 L236 604 L284 512 Z" fill="#e5533f"/>
-    <path d="M276 512 L228 420 L316 420 L364 512 Z" fill="#ff6b5a"/>
-    <path d="M276 512 L228 604 L316 604 L364 512 Z" fill="#e5533f"/>
-    <rect x="200" y="488" width="520" height="48" rx="24" fill="#f3f1ea"/>
-    <path d="M690 400 L846 512 L690 624 Q712 512 690 400 Z" fill="#ffb845"/>
+  <rect width="2732" height="2732" fill="#f4f2ee"/>
+  <g transform="translate(1366 1366) scale(0.6) translate(-512 -512)">
+  <g transform="rotate(-45 512 512)" stroke-linecap="round">
+    <path d="M232 512 L196 456 M232 512 L196 568 M282 512 L246 456 M282 512 L246 568" stroke="#5e8578" stroke-width="30" fill="none"/>
+    <line x1="232" y1="512" x2="736" y2="512" stroke="#34363c" stroke-width="40"/>
+    <path d="M700 432 L836 512 L700 592 Z" fill="#34363c" stroke="#34363c" stroke-width="16" stroke-linejoin="round"/>
   </g>
   </g>
 </svg>

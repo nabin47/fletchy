@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <!-- Splash: centred mark on the app background. Keep art inside the middle ~1000px. -->
+  <rect width="2732" height="2732" fill="#1c1d21"/>
+  <g transform="translate(1366 1366) scale(0.6) translate(-512 -512)">
+  <g transform="rotate(-45 512 512)" stroke-linecap="round">
+    <path d="M232 512 L196 456 M232 512 L196 568 M282 512 L246 456 M282 512 L246 568" stroke="#8fb5a8" stroke-width="30" fill="none"/>
+    <line x1="232" y1="512" x2="736" y2="512" stroke="#d6d3cb" stroke-width="40"/>
+    <path d="M700 432 L836 512 L700 592 Z" fill="#d6d3cb" stroke="#d6d3cb" stroke-width="16" stroke-linejoin="round"/>
+  </g>
+  </g>
+</svg>

@@ -85,14 +85,6 @@ export class Renderer {
     this.oy = Math.round((this.h - this.cell * this.rows) / 2);
   }
 
-  /** Board cell under a viewport point, or null. */
-  cellAt(clientX: number, clientY: number): Cell | null {
-    const r = this.canvas.getBoundingClientRect();
-    const x = Math.floor((clientX - r.left - this.ox) / this.cell);
-    const y = Math.floor((clientY - r.top - this.oy) / this.cell);
-    return x >= 0 && y >= 0 && x < this.cols && y < this.rows ? { x, y } : null;
-  }
-
   /** Viewport point of a cell centre (for tests and tutorials). */
   cellCenterClient(c: Cell): { x: number; y: number } {
     const r = this.canvas.getBoundingClientRect();
@@ -119,8 +111,8 @@ export class Renderer {
     const p = this.center(head(arrow));
     if (popup) this.popups.push({ text: popup, x: p.x, y: p.y, t0: now });
     if (this.reducedMotion) return;
-    const color = this.palette.dirs[arrow.dir];
-    for (let i = 0; i < 14; i++) {
+    const color = this.palette.ink;
+    for (let i = 0; i < 8; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = this.cell * (1.5 + Math.random() * 3);
       this.particles.push({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0, max: 0.35 + Math.random() * 0.3, color });
@@ -162,7 +154,7 @@ export class Renderer {
       if (t >= 1) return false;
       const v = DIR_VEC[arrow.dir];
       const dist = this.reducedMotion ? 0 : (Math.max(this.cols, this.rows) + 3) * this.cell * t * t;
-      this.drawArrow(arrow, v.x * dist, v.y * dist, 1, pal.dirs[arrow.dir], 1 - t * t);
+      this.drawArrow(arrow, v.x * dist, v.y * dist, 1, pal.ink, 1 - t * t);
       return true;
     });
 
@@ -173,10 +165,10 @@ export class Renderer {
       p.y += p.vy * dt;
       p.vx *= 0.9;
       p.vy *= 0.9;
-      ctx.globalAlpha = 1 - p.life / p.max;
+      ctx.globalAlpha = 0.5 * (1 - p.life / p.max);
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, this.cell * 0.07, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, this.cell * 0.05, 0, Math.PI * 2);
       ctx.fill();
       return true;
     });
@@ -186,8 +178,8 @@ export class Renderer {
       const t = (now - p.t0) / POPUP_TIME;
       if (t >= 1) return false;
       ctx.globalAlpha = 1 - t;
-      ctx.fillStyle = pal.text;
-      ctx.font = `700 ${Math.round(this.cell * 0.36)}px system-ui, sans-serif`;
+      ctx.fillStyle = pal.muted;
+      ctx.font = `600 ${Math.round(this.cell * 0.34)}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(p.text, p.x, p.y - t * this.cell * (this.reducedMotion ? 0 : 0.9));
       return true;
@@ -199,13 +191,13 @@ export class Renderer {
     const ctx = this.ctx;
     const s = this.cell;
     ctx.fillStyle = this.palette.panel;
-    roundRect(ctx, this.ox - 6, this.oy - 6, this.cols * s + 12, this.rows * s + 12, 14);
+    roundRect(ctx, this.ox - 6, this.oy - 6, this.cols * s + 12, this.rows * s + 12, 12);
     ctx.fill();
     ctx.fillStyle = this.palette.dot;
     for (let y = 0; y < this.rows; y++)
       for (let x = 0; x < this.cols; x++) {
         ctx.beginPath();
-        ctx.arc(this.ox + (x + 0.5) * s, this.oy + (y + 0.5) * s, s * 0.05, 0, Math.PI * 2);
+        ctx.arc(this.ox + (x + 0.5) * s, this.oy + (y + 0.5) * s, Math.max(1, s * 0.035), 0, Math.PI * 2);
         ctx.fill();
       }
   }
@@ -231,7 +223,7 @@ export class Renderer {
       if (t >= 1) this.spawns.delete(a.id);
       else scale = this.reducedMotion ? 1 : Math.max(0.01, easeOutBack(t));
     }
-    let color = this.palette.dirs[a.dir];
+    let color = this.palette.ink;
     const f0 = this.flashes.get(a.id);
     if (f0 !== undefined) {
       const t = (now - f0) / FLASH_TIME;
@@ -247,9 +239,9 @@ export class Renderer {
     const { x0, y0, x1, y1 } = this.bounds(a);
     const pulse = this.reducedMotion ? 0.6 : 0.5 + 0.5 * Math.sin(now * 8);
     ctx.save();
-    ctx.strokeStyle = this.palette.hint;
-    ctx.globalAlpha = 0.35 + 0.5 * pulse;
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = this.palette.accent;
+    ctx.globalAlpha = 0.35 + 0.55 * pulse;
+    ctx.lineWidth = 2;
     roundRect(ctx, x0 - 2, y0 - 2, x1 - x0 + 4, y1 - y0 + 4, this.cell * 0.25);
     ctx.stroke();
     ctx.restore();
@@ -268,7 +260,7 @@ export class Renderer {
     };
   }
 
-  /** Tile + shaft + fletching + arrowhead. The head shape always shows direction. */
+  /** Faint tile + thin shaft + arrowhead. The head shape always shows direction. */
   private drawArrow(a: Arrow, dx: number, dy: number, scale: number, color: string, alpha: number): void {
     const ctx = this.ctx;
     const s = this.cell;
@@ -280,9 +272,10 @@ export class Renderer {
     ctx.scale(scale, scale);
     ctx.translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
 
+    // A barely-there tile shows the tappable extent without adding visual weight.
     ctx.fillStyle = color;
-    ctx.globalAlpha = alpha * 0.18;
-    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, s * 0.22);
+    ctx.globalAlpha = alpha * 0.06;
+    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, s * 0.18);
     ctx.fill();
     ctx.globalAlpha = alpha;
 
@@ -291,37 +284,52 @@ export class Renderer {
     const tip = this.center(head(a));
     const tailX = tail.x - v.x * s * 0.3;
     const tailY = tail.y - v.y * s * 0.3;
-    // Perpendicular unit vector for the head and fletching widths.
     const px = -v.y;
     const py = v.x;
 
     ctx.strokeStyle = color;
     ctx.lineCap = 'round';
-    ctx.lineWidth = s * 0.14;
+    ctx.lineWidth = Math.max(1.5, s * 0.075);
     ctx.beginPath();
     ctx.moveTo(tailX, tailY);
     ctx.lineTo(tip.x, tip.y);
     ctx.stroke();
 
-    ctx.lineWidth = s * 0.08;
-    for (const side of [1, -1]) {
-      ctx.beginPath();
-      ctx.moveTo(tailX + v.x * s * 0.12, tailY + v.y * s * 0.12);
-      ctx.lineTo(tailX - v.x * s * 0.04 + px * side * s * 0.16, tailY - v.y * s * 0.04 + py * side * s * 0.16);
-      ctx.stroke();
-    }
-
-    const hx = tip.x + v.x * s * 0.36;
-    const hy = tip.y + v.y * s * 0.36;
-    const bx = tip.x - v.x * s * 0.06;
-    const by = tip.y - v.y * s * 0.06;
+    const hx = tip.x + v.x * s * 0.3;
+    const hy = tip.y + v.y * s * 0.3;
+    const bx = tip.x - v.x * s * 0.04;
+    const by = tip.y - v.y * s * 0.04;
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(hx, hy);
-    ctx.lineTo(bx + px * s * 0.28, by + py * s * 0.28);
-    ctx.lineTo(bx - px * s * 0.28, by - py * s * 0.28);
+    ctx.lineTo(bx + px * s * 0.2, by + py * s * 0.2);
+    ctx.lineTo(bx - px * s * 0.2, by - py * s * 0.2);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
+  }
+
+  /**
+   * The arrow under a viewport point. Cells are small, so a tap that lands on
+   * an empty cell still picks the nearest arrow cell within `reach` cells.
+   */
+  arrowAt(grid: Grid, clientX: number, clientY: number, reach = 0.8): number | null {
+    const r = this.canvas.getBoundingClientRect();
+    const fx = (clientX - r.left - this.ox) / this.cell;
+    const fy = (clientY - r.top - this.oy) / this.cell;
+    const exact = grid.at(Math.floor(fx), Math.floor(fy));
+    if (exact >= 0) return exact;
+    let best: number | null = null;
+    let bestD = reach;
+    for (const a of grid.arrows.values())
+      for (const c of a.cells) {
+        const d = Math.hypot(fx - (c.x + 0.5), fy - (c.y + 0.5));
+        if (d < bestD) {
+          bestD = d;
+          best = a.id;
+        }
+      }
+    return best;
   }
 }
 

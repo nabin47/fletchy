@@ -28,6 +28,11 @@ export interface AppInfo {
   webUrl: string;
 }
 
+const ICON_PAUSE =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICON_HINT =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/></svg>';
+
 const esc = (s: string): string => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
 export class FletchyApp {
@@ -59,8 +64,8 @@ export class FletchyApp {
       <header id="hud" hidden></header>
       <div id="stage"><canvas id="board" aria-label="Game board"></canvas></div>
       <footer id="bar" hidden>
-        <button class="icon" data-action="pause" aria-label="${t('pause')}">❚❚</button>
-        <button class="icon hint" data-action="hint" aria-label="${t('hint')}">💡<span></span></button>
+        <button class="icon" data-action="pause" aria-label="${t('pause')}">${ICON_PAUSE}</button>
+        <button class="icon hint" data-action="hint" aria-label="${t('hint')}">${ICON_HINT}<span></span></button>
       </footer>
       <div id="overlay"></div>`;
     const q = <T extends HTMLElement>(sel: string): T => {
@@ -77,7 +82,7 @@ export class FletchyApp {
       hint: q<HTMLButtonElement>('.hint'),
     };
     this.settings = progress.settings();
-    this.renderer = new Renderer(this.el.canvas, palette(true, false));
+    this.renderer = new Renderer(this.el.canvas, palette(false));
     this.applySettings();
 
     new ResizeObserver(() => this.resize()).observe(this.el.stage);
@@ -88,12 +93,9 @@ export class FletchyApp {
     });
     this.el.canvas.addEventListener('pointerdown', (e) => {
       this.sound.unlock();
-      const cell = this.renderer.cellAt(e.clientX, e.clientY);
       const grid = this.grid();
-      if (cell && grid) {
-        const id = grid.at(cell.x, cell.y);
-        if (id >= 0) this.tap(id);
-      }
+      const id = grid ? this.renderer.arrowAt(grid, e.clientX, e.clientY) : null;
+      if (id !== null) this.tap(id);
     });
     this.systemDark.addEventListener('change', () => this.applySettings());
     this.systemReducedMotion.addEventListener('change', () => this.applySettings());
@@ -125,7 +127,7 @@ export class FletchyApp {
     const s = this.settings;
     const dark = s.theme === 'dark' || (s.theme === 'system' && this.systemDark.matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    this.renderer.palette = palette(dark, s.colorblind);
+    this.renderer.palette = palette(dark);
     this.renderer.reducedMotion = s.reduceMotion || this.systemReducedMotion.matches;
     document.documentElement.classList.toggle('reduce-motion', this.renderer.reducedMotion);
     this.sound.enabled = s.sound;
@@ -381,7 +383,7 @@ export class FletchyApp {
 
   private showSettings(): void {
     const s = this.settings;
-    const toggle = (key: 'sound' | 'haptics' | 'colorblind' | 'reduceMotion'): string =>
+    const toggle = (key: 'sound' | 'haptics' | 'reduceMotion'): string =>
       `<button class="toggle" data-action="toggle:${key}" aria-pressed="${s[key]}">${t(key)}<span>${s[key] ? t('on') : t('off')}</span></button>`;
     const themeName = s.theme === 'system' ? t('themeSystem') : s.theme === 'dark' ? t('themeDark') : t('themeLight');
     this.setScreen(
@@ -391,7 +393,6 @@ export class FletchyApp {
         ${toggle('sound')}
         ${toggle('haptics')}
         <button class="toggle" data-action="theme">${t('theme')}<span>${themeName}</span></button>
-        ${toggle('colorblind')}
         ${toggle('reduceMotion')}
         <button data-action="tutorial">${t('replayTutorial')}</button>
         <a class="link" href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">${t('privacy')}</a>
@@ -532,14 +533,14 @@ export class FletchyApp {
         });
         break;
       case 'theme': {
-        const order: Settings['theme'][] = ['system', 'dark', 'light'];
+        const order: Settings['theme'][] = ['light', 'dark', 'system'];
         this.settings.theme = order[(order.indexOf(this.settings.theme) + 1) % order.length] ?? 'system';
         this.saveSettings();
         break;
       }
       default:
         if (name.startsWith('toggle:')) {
-          const key = name.slice(7) as 'sound' | 'haptics' | 'colorblind' | 'reduceMotion';
+          const key = name.slice(7) as 'sound' | 'haptics' | 'reduceMotion';
           this.settings[key] = !this.settings[key];
           this.saveSettings();
         }
