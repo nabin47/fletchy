@@ -96,6 +96,15 @@ for (const vp of viewports) {
     await page.getByRole('button', { name: /Levels/ }).click();
     await page.waitForTimeout(400);
     await shot(page, '08-level', vp);
+
+    // Zoom in with the button and with a wheel step, then back out to fit.
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    expect(await page.evaluate(() => window.__fletchy?.debug?.zoom() ?? 1)).toBeGreaterThan(1.5);
+    await page.waitForTimeout(200);
+    await shot(page, '08b-level-zoomed', vp);
+    for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Zoom out' }).click();
+    expect(await page.evaluate(() => window.__fletchy?.debug?.zoom() ?? 0)).toBe(1);
     await tapFreeArrow(page);
     await expect
       .poll(

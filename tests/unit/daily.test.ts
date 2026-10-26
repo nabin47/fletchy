@@ -27,18 +27,16 @@ describe('Daily Grid', () => {
     expect(dailyBoard('2026-11-05')).not.toEqual(dailyBoard('2026-11-06'));
   });
 
-  it('a year of boards is 8x10, about 65% full and solvable', () => {
+  it('a year of boards are full 9x13 mazes and solvable', () => {
     const start = Date.parse('2026-11-01T00:00:00Z');
     for (let d = 0; d < 365; d++) {
       const date = utcDateString(new Date(start + d * 86_400_000));
       const board = dailyBoard(date);
       expect(board.cols).toBe(DAILY.cols);
       expect(board.rows).toBe(DAILY.rows);
-      expectWellFormed(board);
+      expectWellFormed(board, { snake: true });
       expect(isSolvable(board)).toBe(true);
-      const density = Grid.from(board).density();
-      expect(density).toBeGreaterThanOrEqual(0.6);
-      expect(density).toBeLessThan(0.72);
+      expect(Grid.from(board).density()).toBe(1);
     }
   });
 

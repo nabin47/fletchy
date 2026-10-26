@@ -30,6 +30,8 @@ const en = {
   retry: 'Tap to retry',
   restart: 'Restart',
   hint: 'Hint',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
   hintsLeft: '{n} left today',
   gameOver: 'Game over',
   overflow: 'The board filled up',

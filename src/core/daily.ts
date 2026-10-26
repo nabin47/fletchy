@@ -1,7 +1,7 @@
 import { DAILY } from './config.ts';
-import { generateBoard } from './generator.ts';
+import { mazeBoard } from './maze.ts';
 import { Grid } from './grid.ts';
-import { hashString, mulberry32 } from './rng.ts';
+import { hashString } from './rng.ts';
 import { firstBlocker } from './rules.ts';
 import type { Board } from './types.ts';
 
@@ -27,13 +27,9 @@ export function dailySeed(dateStr: string): number {
   return hashString(`${DAILY.salt}:${dateStr}`);
 }
 
+/** A full maze, the same worldwide for a UTC date. */
 export function dailyBoard(dateStr: string): Board {
-  return generateBoard(mulberry32(dailySeed(dateStr)), {
-    cols: DAILY.cols,
-    rows: DAILY.rows,
-    fill: DAILY.fill,
-    placement: DAILY.placement,
-  });
+  return mazeBoard(`${DAILY.salt}:${dailySeed(dateStr)}`, { cols: DAILY.cols, rows: DAILY.rows, ...DAILY.maze });
 }
 
 export function parSeconds(board: Board): number {

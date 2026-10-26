@@ -15,7 +15,10 @@ export const SCORING = {
 export const RUSH = {
   cols: 9,
   rows: 13,
-  startArrows: 14,
+  /** Rounds start on a full maze of bent arrows... */
+  startMaze: { fill: 0.85, maxLen: 6, bendProb: 0.35, chainBias: 0.2 },
+  /** ...and the first wave waits this long, so there is room to make. */
+  headStart: 15,
   hearts: 3,
   maxHearts: 3,
   /** Game over when density is at least this and a wave cannot be placed. */
@@ -28,7 +31,7 @@ export const RUSH = {
   /** ...and per wave the player pulled in early by clearing fast. */
   levelPerEarlyWave: 0.25,
   /** Arrivals per second at level 0, and growth per level. */
-  baseRate: 0.55,
+  baseRate: 0.45,
   rateGrowth: 1.025,
 };
 
@@ -61,25 +64,25 @@ export function minOnBoard(level: number): number {
   return Math.min(16, 5 + Math.floor(level / 3));
 }
 
-export function rushPlacement(level: number): { len2Prob: number; len3Prob: number; chainBias: number } {
+/** Waves are bent arrows like the starting maze, growing a little longer with the level. */
+export function rushPlacement(level: number): { chainBias: number; snake: { maxLen: number; bendProb: number } } {
   return {
-    len2Prob: 0.45,
-    len3Prob: Math.min(0.45, 0.2 + 0.005 * level),
     chainBias: Math.min(0.9, 0.015 * level),
+    snake: { maxLen: Math.min(7, 3 + Math.floor(level / 15)), bendProb: 0.35 },
   };
 }
 
 export const DAILY = {
   cols: 9,
   rows: 13,
-  fill: 0.65,
   hearts: 3,
   salt: 'fletchy-daily-v1',
   /** Puzzle #1 is this UTC date. */
   epoch: '2026-10-25',
   /** Par time in seconds per arrow on the board (3 stars = no mistakes and under par). */
   parPerArrow: 1.6,
-  placement: { len2Prob: 0.45, len3Prob: 0.3, chainBias: 0.6 },
+  /** A full maze of bent arrows, about as tangled as a mid-game level. */
+  maze: { fill: 0.88, maxLen: 9, bendProb: 0.42, chainBias: 0.5 },
 };
 
 export const LEVELS = {
@@ -89,8 +92,6 @@ export const LEVELS = {
   bossEvery: 5,
   minCols: 8,
   maxCols: 14,
-  /** Seed variants tried per level until one fills every cell. */
-  maxAttempts: 40,
 };
 
 export interface LevelSpec {

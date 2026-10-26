@@ -25,21 +25,20 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('store screenshots', async ({ page }) => {
-  // Rush, mid-tap: popups and particles visible.
+  // Rush starts on a full maze: the busiest board of the round.
   await dbg(page, (d) => d.startRush(20261025));
-  await dbg(page, (d) => d.advance(9));
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(500);
+  await shot(page, 'rush-busy');
+
+  // Mid-tap: arrows sliding out, popups and particles visible.
+  for (let i = 0; i < 6; i++) await dbg(page, (d) => d.tapFree());
+  await page.waitForTimeout(700);
   for (let i = 0; i < 3; i++) {
     await tapFree(page);
     await page.waitForTimeout(90);
   }
   await page.waitForTimeout(60);
   await shot(page, 'rush');
-
-  // A busy board later in the round.
-  await dbg(page, (d) => d.advance(40));
-  await page.waitForTimeout(500);
-  await shot(page, 'rush-busy');
 
   // Game over with a new best: clear arrows to beat 150, then miss three times.
   for (let i = 0; i < 40 && (await dbg(page, (d) => d.state().score)) < 400; i++) {

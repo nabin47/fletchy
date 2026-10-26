@@ -16,12 +16,12 @@
     "featureTagline": "One tap. Endless puzzles.",
     "screenshots": [
       {
-        "shot": "rush",
-        "caption": "One tap sends an arrow flying"
-      },
-      {
         "shot": "rush-busy",
         "caption": "Clear the path before the board fills up"
+      },
+      {
+        "shot": "rush",
+        "caption": "One tap sends an arrow flying"
       },
       {
         "shot": "levels",
