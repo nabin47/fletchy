@@ -1,6 +1,7 @@
-import { DAILY, RUSH } from '../core/config.ts';
+import { DAILY, LEVELS, RUSH } from '../core/config.ts';
 import { DailyGame, formatTime, puzzleNumber, recordStreak, shareText, utcDateString } from '../core/daily.ts';
 import { Grid } from '../core/grid.ts';
+import { LevelGame } from '../core/levels.ts';
 import { firstBlocker, freeArrows } from '../core/rules.ts';
 import { RushGame } from '../core/rush.ts';
 import { comboMultiplier } from '../core/scoring.ts';
@@ -15,11 +16,12 @@ import { t } from './strings.ts';
 import { palette } from './theme.ts';
 import { TUTORIAL } from './tutorial.ts';
 
-type Screen = 'menu' | 'settings' | 'playing' | 'pause' | 'gameover' | 'dailyResult';
+type Screen = 'menu' | 'settings' | 'playing' | 'pause' | 'gameover' | 'dailyResult' | 'levelResult';
 
 type Session =
   | { kind: 'rush'; game: RushGame; prevBest: number }
   | { kind: 'daily'; game: DailyGame; practice: boolean }
+  | { kind: 'level'; game: LevelGame }
   | { kind: 'tutorial'; step: number; grid: Grid };
 
 export interface AppInfo {
@@ -53,6 +55,8 @@ export class FletchyApp {
   private endAt: number | null = null;
   private advanceAt: number | null = null;
   private hudKey = '';
+  /** Correct taps in a row (Daily/Levels), for the rising clear sound. */
+  private streakTaps = 0;
   private flash = '';
   private readonly info: AppInfo;
   private readonly systemDark = window.matchMedia('(prefers-color-scheme: dark)');
@@ -140,6 +144,7 @@ export class FletchyApp {
 
   private begin(session: Session): void {
     this.session = session;
+    this.streakTaps = 0;
     this.endAt = null;
     this.advanceAt = null;
     this.renderer.reset();
@@ -159,6 +164,10 @@ export class FletchyApp {
   startDaily(practice?: boolean): void {
     const date = this.today();
     this.begin({ kind: 'daily', game: new DailyGame(date), practice: practice ?? progress.dailyResult(date) !== null });
+  }
+
+  startLevel(level = progress.levelReached()): void {
+    this.begin({ kind: 'level', game: new LevelGame(level) });
   }
 
   startTutorial(step = 0): void {
@@ -200,13 +209,14 @@ export class FletchyApp {
     }
 
     const blocker = firstBlocker(grid, arrow);
-    if (s.kind === 'daily') {
+    if (s.kind === 'daily' || s.kind === 'level') {
       const res = s.game.tap(id);
       if (res === 'cleared') {
         this.renderer.onClear(arrow, now);
-        this.sound.clear(grid.size < 1 ? 12 : 1 + ((DAILY.cols * DAILY.rows - grid.occupiedCells()) % 12));
+        this.sound.clear(1 + (++this.streakTaps % 12));
         tapHaptic();
       } else if (res === 'blocked' && blocker !== null) {
+        this.streakTaps = 0;
         this.renderer.onBump(arrow, blocker, now);
         this.sound.bump();
         errorHaptic();
@@ -266,6 +276,7 @@ export class FletchyApp {
       if (now >= this.endAt) {
         this.endAt = null;
         if (s.kind === 'rush') this.showGameOver();
+        else if (s.kind === 'level') this.showLevelResult();
         else this.showDailyResult();
       }
       return;
@@ -323,6 +334,12 @@ export class FletchyApp {
       html = `
         <div class="stat"><small>${t('dailyTitle', { n: g.puzzle })}</small><b>${formatTime(g.time)}</b></div>
         <div class="stat right">${hearts(g.hearts, DAILY.hearts)}<small>${t('par', { t: formatTime(g.par) })}</small></div>`;
+    } else if (s.kind === 'level') {
+      const g = s.game;
+      key = `l${g.level}|${g.hearts}|${g.grid.size}`;
+      html = `
+        <div class="stat"><small>${g.spec.boss ? t('bossLevel') : t('levels')}</small><b>${t('levelTitle', { n: g.level })}</b></div>
+        <div class="stat right">${hearts(g.hearts, LEVELS.hearts)}<small>${t('arrowsLeft', { n: g.grid.size })}</small></div>`;
     } else {
       const lesson = TUTORIAL[s.step];
       key = `t${s.step}`;
@@ -370,6 +387,10 @@ export class FletchyApp {
         <h1>${esc(this.info.name)}</h1>
         <button class="big primary" data-action="rush" autofocus>
           <span>${t('rush')}</span><small>${best.score > 0 ? `${t('best')} ${best.score}` : t('rushTagline')}</small>
+        </button>
+        <button class="big" data-action="level">
+          <span>${t('levels')} <em>${progress.levelReached()}</em></span>
+          <small>${t('levelsTagline')}</small>
         </button>
         <button class="big" data-action="daily">
           <span>${t('daily')} <em>#${puzzleNumber(date)}</em></span>
@@ -465,6 +486,23 @@ export class FletchyApp {
 
   private shareResult = '';
 
+  private showLevelResult(): void {
+    const s = this.session;
+    if (!s || s.kind !== 'level' || !s.game.result) return;
+    const r = s.game.result;
+    if (r.solved) progress.recordLevel(r.level);
+    this.setScreen(
+      'levelResult',
+      `<div class="screen level-result" data-testid="level-result">
+        <h2>${r.solved ? t('levelCleared', { n: r.level }) : t('outOfHearts')}</h2>
+        <p class="meta">${t('time')} ${formatTime(r.seconds)} · ${t('mistakes')} ${r.mistakes}</p>
+        ${r.solved && (r.level + 1) % LEVELS.bossEvery === 0 ? `<p class="nudge">${t('bossNext')}</p>` : ''}
+        <button class="huge primary" data-action="${r.solved ? 'nextLevel' : 'retryLevel'}" autofocus>${r.solved ? t('nextLevel') : t('retry')}</button>
+        <button data-action="menu">${t('menu')}</button>
+      </div>`,
+    );
+  }
+
   private finishTutorial(): void {
     progress.setTutorialDone();
     this.showMenu();
@@ -497,6 +535,15 @@ export class FletchyApp {
       case 'daily':
         this.startDaily();
         break;
+      case 'level':
+        this.startLevel();
+        break;
+      case 'nextLevel':
+        if (s?.kind === 'level') this.startLevel(s.game.level + 1);
+        break;
+      case 'retryLevel':
+        if (s?.kind === 'level') this.startLevel(s.game.level);
+        break;
       case 'dailyPractice':
         this.startDaily(true);
         break;
@@ -515,6 +562,7 @@ export class FletchyApp {
       case 'restart':
         if (s?.kind === 'rush') this.startRush();
         else if (s?.kind === 'daily') this.startDaily(true);
+        else if (s?.kind === 'level') this.startLevel(s.game.level);
         break;
       case 'hint':
         this.useHint();
@@ -573,6 +621,7 @@ export class FletchyApp {
       },
       startRush: (seed?: number) => this.startRush(seed),
       startDaily: () => this.startDaily(),
+      startLevel: (level?: number) => this.startLevel(level),
       skipTutorial: () => this.finishTutorial(),
       freeArrowCenter: () => {
         const id = pick(true);
@@ -593,7 +642,8 @@ export class FletchyApp {
       state: () => {
         const s = this.session;
         if (s?.kind === 'rush') return { kind: s.kind, score: s.game.score, hearts: s.game.hearts, arrows: s.game.grid.size, over: s.game.over };
-        if (s?.kind === 'daily') return { kind: s.kind, score: 0, hearts: s.game.hearts, arrows: s.game.grid.size, over: s.game.result ? 'done' : null };
+        if (s?.kind === 'daily' || s?.kind === 'level')
+          return { kind: s.kind, score: 0, hearts: s.game.hearts, arrows: s.game.grid.size, over: s.game.result ? (s.game.result.solved ? 'done' : 'hearts') : null };
         return { kind: s?.kind ?? 'none', score: 0, hearts: 0, arrows: this.grid()?.size ?? 0, over: null };
       },
     };

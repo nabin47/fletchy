@@ -1,7 +1,8 @@
 import { type Candidate, longestChain, wouldCreateCycle } from './dependency.ts';
-import { Grid } from './grid.ts';
+import { EMPTY, Grid } from './grid.ts';
 import type { Rng } from './rng.ts';
-import { type Arrow, type Board, type Cell, DIR_VEC, DIRS, type Dir } from './types.ts';
+import { laneCells } from './rules.ts';
+import { type Arrow, type Board, type Cell, DIR_VEC, DIRS, type Dir, head } from './types.ts';
 
 export interface PlacementOptions {
   /** Probability of a 2-cell arrow. */
@@ -14,6 +15,12 @@ export interface PlacementOptions {
   samples: number;
   /** Random attempts before falling back to an exhaustive scan. */
   attempts: number;
+  /**
+   * Bent ("snake") arrows: when set, candidates are random walks of up to
+   * `maxLen` cells that turn with probability `bendProb` at each step.
+   * Unset (the default) keeps straight 1-3 cell arrows.
+   */
+  snake?: { maxLen: number; bendProb: number };
 }
 
 export const DEFAULT_PLACEMENT: PlacementOptions = {
@@ -39,8 +46,42 @@ function rollLength(rng: Rng, opts: PlacementOptions): number {
   return 1;
 }
 
+/** An arrow whose exit lane runs through its own body would hit itself while sliding out. */
+function laneCrossesSelf(grid: Grid, cand: Candidate): boolean {
+  if (cand.cells.length < 3) return false;
+  const lane = laneCells(grid, head(cand as Arrow), cand.dir);
+  return lane.some((l) => cand.cells.some((c) => c.x === l.x && c.y === l.y));
+}
+
 function isValid(grid: Grid, cand: Candidate): boolean {
-  return grid.canPlace(cand.cells) && !wouldCreateCycle(grid, cand);
+  return grid.canPlace(cand.cells) && !laneCrossesSelf(grid, cand) && !wouldCreateCycle(grid, cand);
+}
+
+const TURNS: Record<Dir, [Dir, Dir]> = { U: ['L', 'R'], D: ['L', 'R'], L: ['U', 'D'], R: ['U', 'D'] };
+
+/**
+ * A random walk over empty cells, tail first. The head points the way the
+ * last step went, so the arrow keeps moving in the direction it is drawn.
+ */
+function randomSnake(grid: Grid, rng: Rng, maxLen: number, bendProb: number): Candidate | null {
+  const start = { x: rng.int(grid.cols), y: rng.int(grid.rows) };
+  if (grid.at(start.x, start.y) !== EMPTY) return null;
+  const target = 2 + rng.int(Math.max(1, maxLen - 1));
+  const cells: Cell[] = [start];
+  let dir = rng.pick(DIRS);
+  const free = (c: Cell): boolean =>
+    grid.inBounds(c.x, c.y) && grid.at(c.x, c.y) === EMPTY && !cells.some((o) => o.x === c.x && o.y === c.y);
+  while (cells.length < target) {
+    const last = cells[cells.length - 1] as Cell;
+    const [a, b] = TURNS[dir];
+    const turn = rng.chance(0.5) ? [a, b] : [b, a];
+    const order: Dir[] = rng.chance(bendProb) ? [...turn, dir] : [dir, ...turn];
+    const next = order.map((d) => ({ d, c: { x: last.x + DIR_VEC[d].x, y: last.y + DIR_VEC[d].y } })).find((o) => free(o.c));
+    if (!next) break;
+    cells.push(next.c);
+    dir = next.d;
+  }
+  return cells.length >= 2 ? { dir, cells } : null;
 }
 
 /** Every valid placement on the grid, in a fixed (deterministic) order. */
@@ -72,6 +113,11 @@ export function placeArrow(grid: Grid, rng: Rng, opts: PlacementOptions = DEFAUL
   const found: Candidate[] = [];
   const want = opts.chainBias > 0 ? Math.max(1, opts.samples) : 1;
   for (let i = 0; i < opts.attempts && found.length < want; i++) {
+    if (opts.snake) {
+      const cand = randomSnake(grid, rng, opts.snake.maxLen, opts.snake.bendProb);
+      if (cand && isValid(grid, cand)) found.push(cand);
+      continue;
+    }
     const dir = rng.pick(DIRS);
     const h = { x: rng.int(grid.cols), y: rng.int(grid.rows) };
     const cand = { dir, cells: straightCells(h, dir, rollLength(rng, opts)) };

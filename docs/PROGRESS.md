@@ -50,4 +50,11 @@
 - [x] Dynamic difficulty: level from time + early waves, no waiting on an empty board (sim in DECISIONS.md)
 - [x] 9×13 grid, thin arrows, forgiving tap radius
 - [x] Minimal palette (light default + soft dark), new icon/splash/store art, Android resources regenerated
-- [ ] CI green, then the owner re-plays on the phone
+- [x] CI green (PR #8); owner confirmed "much better"
+
+## Levels mode
+
+- [x] Bent arrows in the generator (+ self-lane rule), dense seeded level boards, boss every 5th level
+- [x] Levels UI (menu entry, HUD, cleared/failed screens, progress), snake-style slide animation, no arrow tiles
+- [x] Unit tests (150 levels solvable/dense, boss sizes, determinism), smoke + store screenshot for Levels
+- [ ] CI green, owner play-test

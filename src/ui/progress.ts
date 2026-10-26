@@ -11,7 +11,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = { sound: true, haptics: true, theme: 'light', reduceMotion: false };
 export const HINTS_PER_DAY = 3;
 
-export const STORAGE_KEYS = ['settings', 'rushBest', 'daily', 'streak', 'hints', 'tutorialDone'] as const;
+export const STORAGE_KEYS = ['settings', 'rushBest', 'daily', 'streak', 'hints', 'tutorialDone', 'levelReached'] as const;
 
 export interface RushBest {
   score: number;
@@ -51,6 +51,12 @@ export const progress = {
   },
   useHint(date: string): void {
     write('hints', { date, used: HINTS_PER_DAY - this.hintsLeft(date) + 1 });
+  },
+
+  /** The highest level the player may play (one past the best cleared). */
+  levelReached: (): number => Math.max(1, read('levelReached', 1)),
+  recordLevel(level: number): void {
+    if (level + 1 > this.levelReached()) write('levelReached', level + 1);
   },
 
   tutorialDone: (): boolean => read('tutorialDone', false),

@@ -86,7 +86,7 @@ export class Renderer {
   }
 
   /** Viewport point of a cell centre (for tests and tutorials). */
-  cellCenterClient(c: Cell): { x: number; y: number } {
+  cellCenterClient(c: Cell): Pt {
     const r = this.canvas.getBoundingClientRect();
     return { x: r.left + this.ox + (c.x + 0.5) * this.cell, y: r.top + this.oy + (c.y + 0.5) * this.cell };
   }
@@ -101,7 +101,7 @@ export class Renderer {
     this.hintId = null;
   }
 
-  private center(c: Cell): { x: number; y: number } {
+  private center(c: Cell): Pt {
     return { x: this.ox + (c.x + 0.5) * this.cell, y: this.oy + (c.y + 0.5) * this.cell };
   }
 
@@ -152,9 +152,9 @@ export class Renderer {
     this.clears = this.clears.filter(({ arrow, t0 }) => {
       const t = (now - t0) / (this.reducedMotion ? CLEAR_TIME / 2 : CLEAR_TIME);
       if (t >= 1) return false;
-      const v = DIR_VEC[arrow.dir];
-      const dist = this.reducedMotion ? 0 : (Math.max(this.cols, this.rows) + 3) * this.cell * t * t;
-      this.drawArrow(arrow, v.x * dist, v.y * dist, 1, pal.ink, 1 - t * t);
+      // Snake-style exit: the body follows the head along its own path, then out of the lane.
+      const dist = this.reducedMotion ? 0 : (Math.max(this.cols, this.rows) + arrow.cells.length + 2) * this.cell * t * t;
+      this.drawArrow(arrow, dist, 1, pal.ink, 1 - t * t);
       return true;
     });
 
@@ -203,18 +203,12 @@ export class Renderer {
   }
 
   private drawLiveArrow(a: Arrow, now: number): void {
-    const v = DIR_VEC[a.dir];
-    let dx = 0;
-    let dy = 0;
+    let offset = 0;
     const b0 = this.bumps.get(a.id);
     if (b0 !== undefined) {
       const t = (now - b0) / BUMP_TIME;
       if (t >= 1) this.bumps.delete(a.id);
-      else if (!this.reducedMotion) {
-        const k = Math.sin(t * Math.PI) * this.cell * 0.22;
-        dx = v.x * k;
-        dy = v.y * k;
-      }
+      else if (!this.reducedMotion) offset = Math.sin(t * Math.PI) * this.cell * 0.22;
     }
     let scale = 1;
     const s0 = this.spawns.get(a.id);
@@ -224,86 +218,93 @@ export class Renderer {
       else scale = this.reducedMotion ? 1 : Math.max(0.01, easeOutBack(t));
     }
     let color = this.palette.ink;
+    let alpha = 1;
+    if (this.hintId === a.id) {
+      color = this.palette.accent;
+      alpha = this.reducedMotion ? 1 : 0.6 + 0.4 * Math.sin(now * 8);
+    }
     const f0 = this.flashes.get(a.id);
     if (f0 !== undefined) {
       const t = (now - f0) / FLASH_TIME;
       if (t >= 1) this.flashes.delete(a.id);
       else if (Math.floor(t * 6) % 2 === 0) color = this.palette.danger;
     }
-    if (this.hintId === a.id) this.drawHint(a, now);
-    this.drawArrow(a, dx, dy, scale, color, 1);
-  }
-
-  private drawHint(a: Arrow, now: number): void {
-    const ctx = this.ctx;
-    const { x0, y0, x1, y1 } = this.bounds(a);
-    const pulse = this.reducedMotion ? 0.6 : 0.5 + 0.5 * Math.sin(now * 8);
-    ctx.save();
-    ctx.strokeStyle = this.palette.accent;
-    ctx.globalAlpha = 0.35 + 0.55 * pulse;
-    ctx.lineWidth = 2;
-    roundRect(ctx, x0 - 2, y0 - 2, x1 - x0 + 4, y1 - y0 + 4, this.cell * 0.25);
-    ctx.stroke();
-    ctx.restore();
+    this.drawArrow(a, offset, scale, color, alpha);
   }
 
   private bounds(a: Arrow): { x0: number; y0: number; x1: number; y1: number } {
     const s = this.cell;
-    const inset = s * 0.08;
     const xs = a.cells.map((c) => c.x);
     const ys = a.cells.map((c) => c.y);
     return {
-      x0: this.ox + Math.min(...xs) * s + inset,
-      y0: this.oy + Math.min(...ys) * s + inset,
-      x1: this.ox + (Math.max(...xs) + 1) * s - inset,
-      y1: this.oy + (Math.max(...ys) + 1) * s - inset,
+      x0: this.ox + Math.min(...xs) * s,
+      y0: this.oy + Math.min(...ys) * s,
+      x1: this.ox + (Math.max(...xs) + 1) * s,
+      y1: this.oy + (Math.max(...ys) + 1) * s,
     };
   }
 
-  /** Faint tile + thin shaft + arrowhead. The head shape always shows direction. */
-  private drawArrow(a: Arrow, dx: number, dy: number, scale: number, color: string, alpha: number): void {
+  /**
+   * The arrow's travel path in pixels: a short tail stub, every cell centre
+   * (tail to head), then straight on past the board edge. Drawing a window of
+   * the arrow's length that slides along this path gives snake-like motion.
+   */
+  private travelPath(a: Arrow): { pts: Pt[]; length: number } {
+    const s = this.cell;
+    const centres = a.cells.map((c) => this.center(c));
+    const v = DIR_VEC[a.dir];
+    const first = centres[0] as Pt;
+    const second = centres[1];
+    const back = second ? { x: Math.sign(first.x - second.x), y: Math.sign(first.y - second.y) } : { x: -v.x, y: -v.y };
+    const tail = { x: first.x + back.x * s * 0.32, y: first.y + back.y * s * 0.32 };
+    const h = centres[centres.length - 1] as Pt;
+    const far = (Math.max(this.cols, this.rows) + a.cells.length + 4) * s;
+    const pts = [tail, ...centres, { x: h.x + v.x * far, y: h.y + v.y * far }];
+    let length = 0;
+    for (let i = 1; i < centres.length + 1; i++) length += dist(pts[i - 1] as Pt, pts[i] as Pt);
+    return { pts, length };
+  }
+
+  /** A thin line through the arrow's cells with a small head. The head shape shows direction. */
+  private drawArrow(a: Arrow, offset: number, scale: number, color: string, alpha: number): void {
     const ctx = this.ctx;
     const s = this.cell;
-    const v = DIR_VEC[a.dir];
-    const { x0, y0, x1, y1 } = this.bounds(a);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(dx + (x0 + x1) / 2, dy + (y0 + y1) / 2);
-    ctx.scale(scale, scale);
-    ctx.translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
-
-    // A barely-there tile shows the tappable extent without adding visual weight.
-    ctx.fillStyle = color;
-    ctx.globalAlpha = alpha * 0.06;
-    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, s * 0.18);
-    ctx.fill();
-    ctx.globalAlpha = alpha;
-
-    const first = a.cells[0] as Cell;
-    const tail = this.center(first);
-    const tip = this.center(head(a));
-    const tailX = tail.x - v.x * s * 0.3;
-    const tailY = tail.y - v.y * s * 0.3;
+    const { pts, length } = this.travelPath(a);
+    const body = slice(pts, offset, offset + length);
+    if (body.length < 2) return;
+    const tip = body[body.length - 1] as Pt;
+    const prev = body[body.length - 2] as Pt;
+    const d = dist(prev, tip) || 1;
+    const v = { x: (tip.x - prev.x) / d, y: (tip.y - prev.y) / d };
     const px = -v.y;
     const py = v.x;
 
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (scale !== 1) {
+      const { x0, y0, x1, y1 } = this.bounds(a);
+      ctx.translate((x0 + x1) / 2, (y0 + y1) / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    }
     ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(1.5, s * 0.075);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.min(5, Math.max(2, s * 0.09));
     ctx.beginPath();
-    ctx.moveTo(tailX, tailY);
-    ctx.lineTo(tip.x, tip.y);
+    ctx.moveTo((body[0] as Pt).x, (body[0] as Pt).y);
+    for (const p of body.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
 
     const hx = tip.x + v.x * s * 0.3;
     const hy = tip.y + v.y * s * 0.3;
-    const bx = tip.x - v.x * s * 0.04;
-    const by = tip.y - v.y * s * 0.04;
-    ctx.fillStyle = color;
+    const bx = tip.x - v.x * s * 0.02;
+    const by = tip.y - v.y * s * 0.02;
     ctx.beginPath();
     ctx.moveTo(hx, hy);
-    ctx.lineTo(bx + px * s * 0.2, by + py * s * 0.2);
-    ctx.lineTo(bx - px * s * 0.2, by - py * s * 0.2);
+    ctx.lineTo(bx + px * s * 0.22, by + py * s * 0.22);
+    ctx.lineTo(bx - px * s * 0.22, by - py * s * 0.22);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -331,6 +332,35 @@ export class Renderer {
       }
     return best;
   }
+}
+
+type Pt = { x: number; y: number };
+
+function dist(a: Pt, b: Pt): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+/** The part of a polyline between arc lengths `from` and `to`. */
+function slice(pts: Pt[], from: number, to: number): Pt[] {
+  const out: Pt[] = [];
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1] as Pt;
+    const b = pts[i] as Pt;
+    const len = dist(a, b);
+    const s0 = acc;
+    const s1 = acc + len;
+    acc = s1;
+    if (s1 < from || len === 0) continue;
+    const at = (t: number): Pt => ({ x: a.x + ((b.x - a.x) * (t - s0)) / len, y: a.y + ((b.y - a.y) * (t - s0)) / len });
+    if (out.length === 0) out.push(at(Math.max(from, s0)));
+    if (s1 >= to) {
+      out.push(at(to));
+      break;
+    }
+    out.push(b);
+  }
+  return out;
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
