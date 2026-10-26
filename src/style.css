@@ -374,3 +374,28 @@ body[data-screen='settings'] #overlay {
   font-size: 0.8rem;
   margin: 8px 0 0;
 }
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.row > * {
+  flex: 1;
+}
+
+.intro {
+  margin: 4px 0;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.button-link {
+  display: block;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--fg);
+  text-decoration: none;
+}

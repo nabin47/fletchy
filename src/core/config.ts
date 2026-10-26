@@ -89,6 +89,8 @@ export const LEVELS = {
   bossEvery: 5,
   minCols: 8,
   maxCols: 14,
+  /** Seed variants tried per level until one fills every cell. */
+  maxAttempts: 40,
 };
 
 export interface LevelSpec {

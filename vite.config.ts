@@ -11,6 +11,7 @@ interface AppConfig {
   themeColor: string;
   backgroundColor: string;
   store: { shortDescription: string };
+  author: { name: string; intro: string; github: string };
 }
 
 const app = JSON.parse(readFileSync(new URL('./app.config.json', import.meta.url), 'utf8')) as AppConfig;
@@ -97,6 +98,7 @@ export default defineConfig({
     __APP_NAME__: JSON.stringify(app.name),
     __APP_VERSION__: JSON.stringify(app.version),
     __APP_WEB_URL__: JSON.stringify(app.webUrl),
+    __APP_AUTHOR__: JSON.stringify(app.author),
   },
   plugins: [webApp()],
   build: {

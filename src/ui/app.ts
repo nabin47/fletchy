@@ -1,4 +1,4 @@
-import { DAILY, LEVELS, RUSH } from '../core/config.ts';
+import { DAILY, LEVELS, RUSH, levelSpec } from '../core/config.ts';
 import { DailyGame, formatTime, puzzleNumber, recordStreak, shareText, utcDateString } from '../core/daily.ts';
 import { Grid } from '../core/grid.ts';
 import { LevelGame } from '../core/levels.ts';
@@ -16,7 +16,7 @@ import { t } from './strings.ts';
 import { palette } from './theme.ts';
 import { TUTORIAL } from './tutorial.ts';
 
-type Screen = 'menu' | 'settings' | 'playing' | 'pause' | 'gameover' | 'dailyResult' | 'levelResult';
+type Screen = 'menu' | 'settings' | 'about' | 'playing' | 'pause' | 'gameover' | 'dailyResult' | 'levelResult';
 
 type Session =
   | { kind: 'rush'; game: RushGame; prevBest: number }
@@ -28,6 +28,7 @@ export interface AppInfo {
   name: string;
   version: string;
   webUrl: string;
+  author: { name: string; intro: string; github: string };
 }
 
 const ICON_PAUSE =
@@ -326,7 +327,7 @@ export class FletchyApp {
       key = `r${g.score}|${g.hearts}|${g.combo}|${g.wave}|${p}`;
       html = `
         <div class="stat"><small>${t('score')}</small><b data-testid="score">${g.score}</b></div>
-        <div class="pressure" style="--p:${p}" role="img" aria-label="${t('pressureLabel', { n: p })}"><span>${g.wave}</span></div>
+        <div class="pressure" style="--p:${p}" role="img" aria-label="${t('pressureLabel', { n: p })}"><span></span></div>
         <div class="stat right">${hearts(g.hearts, RUSH.maxHearts)}<small class="combo${g.combo >= 5 ? ' hot' : ''}">${g.combo > 0 ? `${t('combo')} ${g.combo}${mult > 1 ? ` · x${mult}` : ''}` : '&nbsp;'}</small></div>`;
     } else if (s.kind === 'daily') {
       const g = s.game;
@@ -379,25 +380,45 @@ export class FletchyApp {
     const best = progress.rushBest();
     const done = progress.dailyResult(date);
     const streak = progress.streak();
+    const level = progress.levelReached();
     const streakNow = streak.lastDate === date || streak.lastDate === utcDateString(new Date(Date.now() - 86_400_000)) ? streak.current : 0;
     this.setScreen(
       'menu',
       `<div class="screen menu">
         <img class="logo" src="${import.meta.env.BASE_URL}favicon.svg" alt="" width="88" height="88" />
         <h1>${esc(this.info.name)}</h1>
-        <button class="big primary" data-action="rush" autofocus>
-          <span>${t('rush')}</span><small>${best.score > 0 ? `${t('best')} ${best.score}` : t('rushTagline')}</small>
+        <button class="big primary" data-action="level" autofocus>
+          <span>${t('levels')}</span>
+          <small>${t('levelTitle', { n: level })}${levelSpec(level).boss ? ` · ${t('boss')}` : ''}</small>
         </button>
-        <button class="big" data-action="level">
-          <span>${t('levels')} <em>${progress.levelReached()}</em></span>
-          <small>${t('levelsTagline')}</small>
+        <button class="big" data-action="rush">
+          <span>${t('rush')}</span>
+          <small>${best.score > 0 ? t('bestScore', { n: best.score }) : t('rushTagline')}</small>
         </button>
         <button class="big" data-action="daily">
-          <span>${t('daily')} <em>#${puzzleNumber(date)}</em></span>
-          <small>${done ? `${t('dailyDone')} ${'★'.repeat(done.stars)}` : t('dailyTagline')}${streakNow > 0 ? ` · ${t('streak', { n: streakNow })}` : ''}</small>
+          <span>${t('daily')}</span>
+          <small>${done ? `${t('dailyDone')} ${'★'.repeat(done.stars)}` : t('puzzleNumber', { n: puzzleNumber(date) })}${streakNow > 0 ? ` · ${t('streak', { n: streakNow })}` : ''}</small>
         </button>
-        <button data-action="settings">${t('settings')}</button>
-        <p class="version">v${esc(this.info.version)}</p>
+        <div class="row">
+          <button data-action="settings">${t('settings')}</button>
+          <button data-action="about">${t('about')}</button>
+        </div>
+      </div>`,
+    );
+  }
+
+  private showAbout(): void {
+    const a = this.info.author;
+    this.setScreen(
+      'about',
+      `<div class="screen about">
+        <img class="logo" src="${import.meta.env.BASE_URL}favicon.svg" alt="" width="64" height="64" />
+        <h2>${esc(this.info.name)}</h2>
+        <p class="meta">${t('version', { v: esc(this.info.version) })}</p>
+        <p class="intro">${esc(a.intro)}</p>
+        <a class="button-link" href="${esc(a.github)}" target="_blank" rel="noopener">${t('github')} · ${esc(a.github.replace(/^https?:\/\//, ''))}</a>
+        <a class="link" href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">${t('privacy')}</a>
+        <button class="primary" data-action="menu" autofocus>${t('back')}</button>
       </div>`,
     );
   }
@@ -416,7 +437,6 @@ export class FletchyApp {
         <button class="toggle" data-action="theme">${t('theme')}<span>${themeName}</span></button>
         ${toggle('reduceMotion')}
         <button data-action="tutorial">${t('replayTutorial')}</button>
-        <a class="link" href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">${t('privacy')}</a>
         <button class="primary" data-action="menu" autofocus>${t('back')}</button>
       </div>`,
     );
@@ -549,6 +569,9 @@ export class FletchyApp {
         break;
       case 'settings':
         this.showSettings();
+        break;
+      case 'about':
+        this.showAbout();
         break;
       case 'menu':
         this.showMenu();

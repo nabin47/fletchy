@@ -57,4 +57,11 @@
 - [x] Bent arrows in the generator (+ self-lane rule), dense seeded level boards, boss every 5th level
 - [x] Levels UI (menu entry, HUD, cleared/failed screens, progress), snake-style slide animation, no arrow tiles
 - [x] Unit tests (150 levels solvable/dense, boss sizes, determinism), smoke + store screenshot for Levels
-- [ ] CI green, owner play-test
+- [x] CI green (PR #9), owner play-tested
+
+## Second play-test round
+
+- [x] Arrows animate along their path and off the board (also with reduced motion)
+- [x] Level mazes fill every cell (unit test checks levels 1-150)
+- [x] Clean menu labels, About screen with author intro and GitHub link
+- [ ] CI green, owner re-test

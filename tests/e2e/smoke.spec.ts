@@ -118,11 +118,19 @@ for (const vp of viewports) {
     await page.waitForTimeout(400);
     await shot(page, '07-settings', vp);
 
+    // About: author intro and GitHub link.
+    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'About' }).click();
+    await expect(page.getByRole('link', { name: /GitHub/ })).toHaveAttribute('href', 'https://github.com/nabin47');
+    await page.waitForTimeout(400);
+    await shot(page, '09-about', vp);
+    await page.getByRole('button', { name: 'Back' }).click();
+
     // Progress persisted: the menu shows the best score and today's Daily as done.
     await page.reload();
     await page.waitForFunction(() => window.__fletchy?.ready === true);
     await expect(page.getByRole('button', { name: /Rush/ })).toContainText('Best');
-    await expect(page.getByRole('button', { name: /Daily Grid/ })).toContainText('Done today');
+    await expect(page.getByRole('button', { name: /Daily Grid/ })).toContainText('Solved today');
     await expect(page.getByRole('button', { name: /Levels/ })).toContainText('2');
 
     expect(errors).toEqual([]);

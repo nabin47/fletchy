@@ -40,5 +40,10 @@
         "caption": "Beat your best. Then beat it again."
       }
     ]
+  },
+  "author": {
+    "name": "Jubair Ahmed Nabin",
+    "intro": "Hi, I'm Jubair Ahmed Nabin, a developer from Dhaka, Bangladesh. I built Fletchy as a calm, minimal puzzle game you can pick up for a minute or lose an evening in. Thanks for playing!",
+    "github": "https://github.com/nabin47"
   }
 }
