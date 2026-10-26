@@ -130,9 +130,7 @@ body {
   color: var(--muted);
 }
 
-.pressure[style*='--p:7'],
-.pressure[style*='--p:8'],
-.pressure[style*='--p:9'] {
+.pressure.high {
   --ring: var(--danger);
 }
 
@@ -398,4 +396,13 @@ body[data-screen='settings'] #overlay {
   background: var(--panel);
   color: var(--fg);
   text-decoration: none;
+}
+
+#bar {
+  align-items: center;
+}
+
+.zoom {
+  display: flex;
+  gap: 8px;
 }

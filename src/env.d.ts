@@ -8,6 +8,8 @@ interface FletchyDebug {
   screen(): string;
   /** Same as the Android back button; false means the app would exit. */
   back(): boolean;
+  /** Current board zoom (1 = fit). */
+  zoom(): number;
   /** Fast-forward a Rush game (waves spawn as if time passed). */
   advance(seconds: number): void;
   startRush(seed?: number): void;

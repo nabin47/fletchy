@@ -37,6 +37,10 @@ export class Renderer {
   private w = 0;
   private h = 0;
   private cell = 40;
+  private baseCell = 40;
+  private zoom = 1;
+  private panX = 0;
+  private panY = 0;
   private ox = 0;
   private oy = 0;
   private cols = 1;
@@ -79,9 +83,64 @@ export class Renderer {
 
   private layout(): void {
     const pad = 8;
-    this.cell = Math.max(8, Math.floor(Math.min((this.w - pad * 2) / this.cols, (this.h - pad * 2) / this.rows)));
-    this.ox = Math.round((this.w - this.cell * this.cols) / 2);
-    this.oy = Math.round((this.h - this.cell * this.rows) / 2);
+    this.baseCell = Math.max(8, Math.min((this.w - pad * 2) / this.cols, (this.h - pad * 2) / this.rows));
+    this.zoom = Math.min(this.zoom, this.maxZoom());
+    this.cell = this.baseCell * this.zoom;
+    // When zoomed in, the board may be panned until its edge reaches the view edge (plus a margin).
+    const clamp = (pan: number, board: number, view: number): number => {
+      const limit = Math.max(0, (board - view) / 2 + pad * 2);
+      return Math.max(-limit, Math.min(limit, pan));
+    };
+    this.panX = clamp(this.panX, this.cell * this.cols, this.w);
+    this.panY = clamp(this.panY, this.cell * this.rows, this.h);
+    this.ox = (this.w - this.cell * this.cols) / 2 + this.panX;
+    this.oy = (this.h - this.cell * this.rows) / 2 + this.panY;
+  }
+
+  // ---------- zoom and pan ----------
+
+  /** Big boards can zoom further: up to about 80 px cells, at least 1.5x, at most 3x. */
+  maxZoom(): number {
+    return Math.max(1.5, Math.min(3, 80 / this.baseCell));
+  }
+
+  get zoomLevel(): number {
+    return this.zoom;
+  }
+
+  /** Zoom by `factor`, keeping the board point under (clientX, clientY) in place. */
+  zoomAt(factor: number, clientX?: number, clientY?: number): void {
+    const r = this.canvas.getBoundingClientRect();
+    const px = clientX === undefined ? this.w / 2 : clientX - r.left;
+    const py = clientY === undefined ? this.h / 2 : clientY - r.top;
+    const fx = (px - this.ox) / this.cell;
+    const fy = (py - this.oy) / this.cell;
+    this.zoom = Math.max(1, Math.min(this.maxZoom(), this.zoom * factor));
+    const cell = this.baseCell * this.zoom;
+    this.panX = px - fx * cell - (this.w - cell * this.cols) / 2;
+    this.panY = py - fy * cell - (this.h - cell * this.rows) / 2;
+    if (this.zoom === 1) this.panX = this.panY = 0;
+    this.layout();
+  }
+
+  panBy(dx: number, dy: number): void {
+    this.panX += dx;
+    this.panY += dy;
+    this.layout();
+  }
+
+  resetView(): void {
+    this.zoom = 1;
+    this.panX = this.panY = 0;
+    this.layout();
+  }
+
+  /** Pan so a cell is on screen (used when a hint points somewhere off view). */
+  reveal(c: Cell): void {
+    const p = this.center(c);
+    const margin = this.cell;
+    if (p.x >= margin && p.x <= this.w - margin && p.y >= margin && p.y <= this.h - margin) return;
+    this.panBy(this.w / 2 - p.x, this.h / 2 - p.y);
   }
 
   /** Viewport point of a cell centre (for tests and tutorials). */

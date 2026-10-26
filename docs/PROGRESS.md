@@ -64,4 +64,10 @@
 - [x] Arrows animate along their path and off the board (also with reduced motion)
 - [x] Level mazes fill every cell (unit test checks levels 1-150)
 - [x] Clean menu labels, About screen with author intro and GitHub link
+- [x] CI green (PR #10)
+
+## Full mazes everywhere + zoom
+
+- [x] Shared `mazeBoard()`; Daily Grid and the Rush start are full mazes; Rush head start + bent-arrow waves, sim re-tuned
+- [x] Pinch / wheel / button zoom with panning; taps on release
 - [ ] CI green, owner re-test

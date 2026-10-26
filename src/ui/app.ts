@@ -1,6 +1,7 @@
 import { DAILY, LEVELS, RUSH, levelSpec } from '../core/config.ts';
 import { DailyGame, formatTime, puzzleNumber, recordStreak, shareText, utcDateString } from '../core/daily.ts';
 import { Grid } from '../core/grid.ts';
+import type { Cell } from '../core/types.ts';
 import { LevelGame } from '../core/levels.ts';
 import { firstBlocker, freeArrows } from '../core/rules.ts';
 import { RushGame } from '../core/rush.ts';
@@ -33,6 +34,10 @@ export interface AppInfo {
 
 const ICON_PAUSE =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICON_PLUS =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICON_MINUS =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const ICON_HINT =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/></svg>';
 
@@ -70,6 +75,10 @@ export class FletchyApp {
       <div id="stage"><canvas id="board" aria-label="Game board"></canvas></div>
       <footer id="bar" hidden>
         <button class="icon" data-action="pause" aria-label="${t('pause')}">${ICON_PAUSE}</button>
+        <div class="zoom">
+          <button class="icon" data-action="zoomOut" aria-label="${t('zoomOut')}">${ICON_MINUS}</button>
+          <button class="icon" data-action="zoomIn" aria-label="${t('zoomIn')}">${ICON_PLUS}</button>
+        </div>
         <button class="icon hint" data-action="hint" aria-label="${t('hint')}">${ICON_HINT}<span></span></button>
       </footer>
       <div id="overlay"></div>`;
@@ -96,12 +105,7 @@ export class FletchyApp {
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
       if (target) this.action(target.dataset.action ?? '');
     });
-    this.el.canvas.addEventListener('pointerdown', (e) => {
-      this.sound.unlock();
-      const grid = this.grid();
-      const id = grid ? this.renderer.arrowAt(grid, e.clientX, e.clientY) : null;
-      if (id !== null) this.tap(id);
-    });
+    this.initGestures();
     this.systemDark.addEventListener('change', () => this.applySettings());
     this.systemReducedMotion.addEventListener('change', () => this.applySettings());
     initLifecycle({ onPause: () => this.pause(), onBack: () => this.back() });
@@ -109,6 +113,79 @@ export class FletchyApp {
     if (progress.tutorialDone()) this.showMenu();
     else this.startTutorial();
     requestAnimationFrame((ts) => this.frame(ts));
+  }
+
+  // ---------- input: tap, pinch-zoom, pan ----------
+
+  /**
+   * One finger: a tap (released within 10 px) taps an arrow; a drag pans when
+   * zoomed in. Two fingers: pinch to zoom around their midpoint. The mouse
+   * wheel zooms too. Taps fire on release so a pinch never taps an arrow.
+   */
+  private initGestures(): void {
+    const canvas = this.el.canvas;
+    const pts = new Map<number, { x: number; y: number }>();
+    let start: { x: number; y: number } | null = null;
+    let moved = false;
+    let pinch: { dist: number } | null = null;
+    const distance = (): number => {
+      const [a, b] = [...pts.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+    };
+    const mid = (): { x: number; y: number } => {
+      const v = [...pts.values()];
+      return { x: v.reduce((s, p) => s + p.x, 0) / v.length, y: v.reduce((s, p) => s + p.y, 0) / v.length };
+    };
+
+    canvas.addEventListener('pointerdown', (e) => {
+      this.sound.unlock();
+      canvas.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1) {
+        start = { x: e.clientX, y: e.clientY };
+        moved = false;
+      } else if (pts.size === 2) {
+        pinch = { dist: distance() };
+        moved = true;
+      }
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const prev = pts.get(e.pointerId);
+      if (!prev) return;
+      const before = mid();
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size >= 2) {
+        const d = distance();
+        if (pinch.dist > 0) this.renderer.zoomAt(d / pinch.dist, mid().x, mid().y);
+        pinch.dist = d;
+        const after = mid();
+        this.renderer.panBy(after.x - before.x, after.y - before.y);
+        return;
+      }
+      if (start && !moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) moved = true;
+      if (moved && this.renderer.zoomLevel > 1) this.renderer.panBy(e.clientX - prev.x, e.clientY - prev.y);
+    });
+    const end = (e: PointerEvent, cancelled: boolean): void => {
+      if (!pts.delete(e.pointerId)) return;
+      if (pts.size < 2) pinch = null;
+      if (pts.size > 0) return;
+      if (!cancelled && !moved && start) {
+        const grid = this.grid();
+        const id = grid ? this.renderer.arrowAt(grid, start.x, start.y) : null;
+        if (id !== null) this.tap(id);
+      }
+      start = null;
+    };
+    canvas.addEventListener('pointerup', (e) => end(e, false));
+    canvas.addEventListener('pointercancel', (e) => end(e, true));
+    canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        this.renderer.zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
+      },
+      { passive: false },
+    );
   }
 
   // ---------- state helpers ----------
@@ -149,6 +226,7 @@ export class FletchyApp {
     this.endAt = null;
     this.advanceAt = null;
     this.renderer.reset();
+    this.renderer.resetView();
     const g = this.grid();
     if (g) {
       this.renderer.setBoardSize(g.cols, g.rows);
@@ -246,7 +324,9 @@ export class FletchyApp {
     const free = freeArrows(grid);
     if (free.length === 0) return;
     progress.useHint(date);
-    this.renderer.hintId = (free.find((a) => a.cells.length > 1) ?? free[0])?.id ?? null;
+    const pick = free.find((a) => a.cells.length > 1) ?? free[0];
+    this.renderer.hintId = pick?.id ?? null;
+    if (pick) this.renderer.reveal(pick.cells[pick.cells.length - 1] as Cell);
     this.hudKey = '';
   }
 
@@ -327,7 +407,7 @@ export class FletchyApp {
       key = `r${g.score}|${g.hearts}|${g.combo}|${g.wave}|${p}`;
       html = `
         <div class="stat"><small>${t('score')}</small><b data-testid="score">${g.score}</b></div>
-        <div class="pressure" style="--p:${p}" role="img" aria-label="${t('pressureLabel', { n: p })}"><span></span></div>
+        <div class="pressure${p >= 70 ? ' high' : ''}" style="--p:${p}" role="img" aria-label="${t('pressureLabel', { n: p })}"><span></span></div>
         <div class="stat right">${hearts(g.hearts, RUSH.maxHearts)}<small class="combo${g.combo >= 5 ? ' hot' : ''}">${g.combo > 0 ? `${t('combo')} ${g.combo}${mult > 1 ? ` · x${mult}` : ''}` : '&nbsp;'}</small></div>`;
     } else if (s.kind === 'daily') {
       const g = s.game;
@@ -590,6 +670,12 @@ export class FletchyApp {
       case 'hint':
         this.useHint();
         break;
+      case 'zoomIn':
+        this.renderer.zoomAt(1.4);
+        break;
+      case 'zoomOut':
+        this.renderer.zoomAt(1 / 1.4);
+        break;
       case 'tutorial':
         this.startTutorial();
         break;
@@ -637,6 +723,7 @@ export class FletchyApp {
     return {
       screen: () => this.screen,
       back: () => this.back(),
+      zoom: () => this.renderer.zoomLevel,
       advance: (seconds: number) => {
         const s = this.session;
         if (s?.kind !== 'rush') return;

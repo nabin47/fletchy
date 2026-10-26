@@ -83,3 +83,10 @@ Owner feedback: too easy (waiting for waves after clearing the board), arrows to
 - **Clear animation.** A cleared arrow now travels along its own path until its tail has left the board, at a speed the eye can follow (0.3-0.9 s), and fades only at the very end. It is the core feedback of a tap, so it is kept (60% of the duration) when reduced motion is on; only shake and particles are dropped there.
 - **Menu.** The modes are Levels (primary), Rush and Daily Grid, each with a one-line status (current level and boss marker, best score, puzzle number or today's stars and streak). Settings and About sit side by side. The version number and the privacy link moved to About. The pressure ring no longer shows a bare wave number.
 - **About.** Name, version, the author's intro and GitHub link come from `app.config.json` → `author` (edit there). The intro uses only facts from the owner's public GitHub profile.
+
+## Full mazes everywhere, zoom
+
+- **One maze generator.** `src/core/maze.ts` (`mazeBoard(seed, spec)`) builds the full, solvable boards for Levels, Daily Grid and the start of every Rush round. Levels kept their exact seeds, so their boards did not change.
+- **Daily Grid** is a full 9×13 maze of bent arrows, the same worldwide per UTC date. Puzzle content changed again; puzzle numbers did not. Par is still 1.6 s per arrow.
+- **Rush** starts on a full maze, so the first wave waits for a 15 s head start (otherwise the overflow rule would end the round at once). Waves are now short bent arrows (3 to 7 cells, growing with the level). Arrival rate re-tuned to 0.45/s at level 0. Sim (80 games per bot): beginner 69 s mean (median 77 s), casual 142 s, skilled 170 s, perfect bot always overwhelmed at about 185 s.
+- **Zoom.** Pinch, mouse wheel or the +/− buttons zoom the board around the touch point: up to about 80 px cells, at least 1.5×, at most 3×. Dragging pans when zoomed in, clamped so the board cannot be lost. Taps now fire on release, and only if the finger moved less than 10 px and no second finger joined, so a pinch or pan never taps an arrow. A hint pans the hinted arrow into view. Every new board starts at fit-to-screen.

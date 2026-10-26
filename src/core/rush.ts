@@ -1,5 +1,6 @@
 import { RUSH, SCORING, minOnBoard, rushPlacement, spawnInterval, waveSize } from './config.ts';
 import { DEFAULT_PLACEMENT, placeArrow } from './generator.ts';
+import { mazeBoard } from './maze.ts';
 import { Grid } from './grid.ts';
 import { mulberry32, type Rng } from './rng.ts';
 import { firstBlocker } from './rules.ts';
@@ -52,16 +53,10 @@ export class RushGame {
   constructor(seed: number) {
     this.seed = seed;
     this.rng = mulberry32(seed);
-    this.grid = new Grid(RUSH.cols, RUSH.rows);
-    const placement = { ...DEFAULT_PLACEMENT, ...rushPlacement(0) };
-    const start: Arrow[] = [];
-    for (let i = 0; i < RUSH.startArrows; i++) {
-      const a = placeArrow(this.grid, this.rng, placement);
-      if (!a) break;
-      start.push(a);
-    }
-    this.track(0, start);
-    this.nextSpawnAt = spawnInterval(0);
+    // Start on a full maze; the first wave only arrives after a head start.
+    this.grid = Grid.from(mazeBoard(`rush:${seed}`, { cols: RUSH.cols, rows: RUSH.rows, ...RUSH.startMaze }));
+    this.track(0, [...this.grid.arrows.values()]);
+    this.nextSpawnAt = RUSH.headStart;
   }
 
   /** Current difficulty level (see config.ts). */

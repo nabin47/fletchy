@@ -7,9 +7,10 @@ import { RushGame } from '../../src/core/rush.ts';
 import { expectWellFormed } from './helpers.ts';
 
 describe('Rush', () => {
-  it('starts with the configured board', () => {
+  it('starts on a full maze, and the first wave waits for the head start', () => {
     const g = new RushGame(1);
-    expect(g.grid.size).toBe(RUSH.startArrows);
+    expect(g.grid.density()).toBe(1);
+    expect(g.nextSpawnAt).toBe(RUSH.headStart);
     expect(g.hearts).toBe(3);
     expect(freeArrows(g.grid).length).toBeGreaterThan(0);
   });
@@ -29,7 +30,7 @@ describe('Rush', () => {
         // A slow, error-free player: one tap every ~0.8 s.
         if (g.grid.size > 0 && rng.chance(0.12)) g.tap(rng.pick(freeArrows(g.grid)).id);
       }
-      expectWellFormed(g.grid.snapshot());
+      expectWellFormed(g.grid.snapshot(), { snake: true });
       expect(spawns).toBeGreaterThan(0);
     }
   }, 60_000);
