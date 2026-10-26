@@ -84,6 +84,81 @@ function randomSnake(grid: Grid, rng: Rng, maxLen: number, bendProb: number): Ca
   return cells.length >= 2 ? { dir, cells } : null;
 }
 
+/**
+ * Covers as many empty cells as possible without breaking solvability: a
+ * neighbouring arrow grown into the gap (at its tail, or at its head, which
+ * then turns towards the gap), else a new two- or one-cell arrow.
+ * Returns the number of cells still empty.
+ */
+export function fillGaps(grid: Grid, rng: Rng): number {
+  const empties = (): Cell[] => {
+    const out: Cell[] = [];
+    for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) if (grid.at(x, y) === EMPTY) out.push({ x, y });
+    return out;
+  };
+  const shuffle = <T>(xs: T[]): T[] => {
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      [xs[i], xs[j]] = [xs[j] as T, xs[i] as T];
+    }
+    return xs;
+  };
+  const stepDir = (from: Cell, to: Cell): Dir => (to.x > from.x ? 'R' : to.x < from.x ? 'L' : to.y > from.y ? 'D' : 'U');
+  const same = (a: Cell, b: Cell): boolean => a.x === b.x && a.y === b.y;
+
+  /** Replace arrow `a` with `cand` (same id) if that keeps the board valid. */
+  const tryReshape = (a: Arrow, cand: Candidate): boolean => {
+    grid.remove(a.id);
+    if (isValid(grid, cand)) {
+      grid.add({ id: a.id, ...cand });
+      return true;
+    }
+    grid.add(a);
+    return false;
+  };
+
+  // Prefer growing a neighbour (keeps arrows long and maze-like), then a new
+  // two-cell arrow, and only then a single-cell arrow.
+  const fillCell = (c: Cell): boolean => {
+    const neighbours = shuffle(DIRS.map((d) => ({ x: c.x + DIR_VEC[d].x, y: c.y + DIR_VEC[d].y }))).filter((n) => grid.inBounds(n.x, n.y));
+    for (const n of neighbours) {
+      const a = grid.arrows.get(grid.at(n.x, n.y));
+      if (!a) continue;
+      // The head must keep pointing the way its last step goes, so a one-cell
+      // arrow can only grow backwards in line with its direction.
+      const tailOk = a.cells.length > 1 || stepDir(c, n) === a.dir;
+      if (tailOk && same(a.cells[0] as Cell, n) && tryReshape(a, { dir: a.dir, cells: [c, ...a.cells] })) return true;
+      if (same(head(a), n) && tryReshape(a, { dir: stepDir(n, c), cells: [...a.cells, c] })) return true;
+    }
+    for (const n of neighbours) {
+      if (grid.at(n.x, n.y) !== EMPTY) continue;
+      for (const cells of [[c, n], [n, c]]) {
+        const cand = { dir: stepDir(cells[0] as Cell, cells[1] as Cell), cells };
+        if (isValid(grid, cand)) {
+          grid.add({ id: grid.allocId(), ...cand });
+          return true;
+        }
+      }
+    }
+    for (const dir of shuffle([...DIRS])) {
+      const cand = { dir, cells: [c] };
+      if (isValid(grid, cand)) {
+        grid.add({ id: grid.allocId(), ...cand });
+        return true;
+      }
+    }
+    return false;
+  };
+
+  let left = empties();
+  for (let progress = true; progress && left.length > 0; ) {
+    progress = false;
+    for (const c of shuffle(left)) if (grid.at(c.x, c.y) === EMPTY && fillCell(c)) progress = true;
+    left = empties();
+  }
+  return left.length;
+}
+
 /** Every valid placement on the grid, in a fixed (deterministic) order. */
 export function allValidPlacements(grid: Grid): Candidate[] {
   const out: Candidate[] = [];

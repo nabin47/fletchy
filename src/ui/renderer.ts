@@ -19,7 +19,6 @@ interface Popup {
   t0: number;
 }
 
-const CLEAR_TIME = 0.3;
 const BUMP_TIME = 0.28;
 const FLASH_TIME = 0.45;
 const SPAWN_TIME = 0.22;
@@ -150,11 +149,15 @@ export class Renderer {
     }
 
     this.clears = this.clears.filter(({ arrow, t0 }) => {
-      const t = (now - t0) / (this.reducedMotion ? CLEAR_TIME / 2 : CLEAR_TIME);
+      // The arrow travels along its own path and out past the board edge at a
+      // speed the eye can follow. This is the core feedback of a tap, so it
+      // stays (faster) with reduced motion; only shake and particles go.
+      const exit = this.exitDistance(arrow);
+      const duration = Math.min(0.9, 0.22 + exit / (this.cell * 30)) * (this.reducedMotion ? 0.6 : 1);
+      const t = (now - t0) / duration;
       if (t >= 1) return false;
-      // Snake-style exit: the body follows the head along its own path, then out of the lane.
-      const dist = this.reducedMotion ? 0 : (Math.max(this.cols, this.rows) + arrow.cells.length + 2) * this.cell * t * t;
-      this.drawArrow(arrow, dist, 1, pal.ink, 1 - t * t);
+      const eased = 0.35 * t + 0.65 * t * t;
+      this.drawArrow(arrow, eased * exit, 1, pal.ink, t < 0.8 ? 1 : (1 - t) / 0.2);
       return true;
     });
 
@@ -263,6 +266,14 @@ export class Renderer {
     let length = 0;
     for (let i = 1; i < centres.length + 1; i++) length += dist(pts[i - 1] as Pt, pts[i] as Pt);
     return { pts, length };
+  }
+
+  /** How far (px) an arrow must travel along its path until its tail has left the board. */
+  private exitDistance(a: Arrow): number {
+    const h = head(a);
+    const v = DIR_VEC[a.dir];
+    const toEdge = v.x > 0 ? this.cols - h.x : v.x < 0 ? h.x + 1 : v.y > 0 ? this.rows - h.y : h.y + 1;
+    return (toEdge + a.cells.length + 0.6) * this.cell;
   }
 
   /** A thin line through the arrow's cells with a small head. The head shape shows direction. */

@@ -1,6 +1,7 @@
 declare const __APP_NAME__: string;
 declare const __APP_VERSION__: string;
 declare const __APP_WEB_URL__: string;
+declare const __APP_AUTHOR__: { name: string; intro: string; github: string };
 
 /** Test hook used by the Playwright smoke test (window.__fletchy.debug). */
 interface FletchyDebug {

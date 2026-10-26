@@ -8,7 +8,7 @@ import { head } from '../../src/core/types.ts';
 import { expectWellFormed } from './helpers.ts';
 
 describe('Levels', () => {
-  it('levels 1-150 are dense, solvable mazes with bent arrows', () => {
+  it('levels 1-150 are full, solvable mazes with bent arrows', () => {
     let bent = 0;
     for (let n = 1; n <= 150; n++) {
       const board = levelBoard(n);
@@ -16,7 +16,8 @@ describe('Levels', () => {
       expect([board.cols, board.rows]).toEqual([spec.cols, spec.rows]);
       expectWellFormed(board, { snake: true });
       if (solve(board) === null) throw new Error(`level ${n} is unsolvable`);
-      expect(Grid.from(board).density()).toBeGreaterThan(0.75);
+      // Every cell of a level is covered by an arrow.
+      expect(Grid.from(board).density()).toBe(1);
       const g = Grid.from(board);
       for (const a of board.arrows) {
         // No arrow's exit lane runs through its own body.

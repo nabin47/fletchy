@@ -76,3 +76,10 @@ Owner feedback: too easy (waiting for waves after clearing the board), arrows to
 - **Filling the maze.** Long snakes go first, then short straight arrows fill the remaining gaps up to the target density.
 - **No tile behind arrows** (all modes): an arrow is just its line and head. Hints now tint the whole arrow in the accent colour instead of drawing a box.
 - **Snake motion.** Cleared arrows slide out along their own path and then out of the lane (a window of the arrow's length moving along a polyline), not as a rigid shape.
+
+## Second play-test round
+
+- **Full mazes.** Level boards cover every cell. After the long bent arrows are placed, `fillGaps()` grows neighbouring arrows into each gap (at the tail, or at the head, which then turns into the gap). Only if that is impossible does it add a 2-cell or 1-cell arrow. Every change still passes the cycle check, so boards stay solvable. If a hole cannot be closed, the next seed variant (`<salt>:<level>:<attempt>`, up to 40) is tried; in tests all of levels 1-150 fill completely on the way. A one-cell arrow only grows backwards in line with its head, so the head always points along its last step.
+- **Clear animation.** A cleared arrow now travels along its own path until its tail has left the board, at a speed the eye can follow (0.3-0.9 s), and fades only at the very end. It is the core feedback of a tap, so it is kept (60% of the duration) when reduced motion is on; only shake and particles are dropped there.
+- **Menu.** The modes are Levels (primary), Rush and Daily Grid, each with a one-line status (current level and boss marker, best score, puzzle number or today's stars and streak). Settings and About sit side by side. The version number and the privacy link moved to About. The pressure ring no longer shows a bare wave number.
+- **About.** Name, version, the author's intro and GitHub link come from `app.config.json` → `author` (edit there). The intro uses only facts from the owner's public GitHub profile.

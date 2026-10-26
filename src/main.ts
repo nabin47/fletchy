@@ -10,7 +10,7 @@ async function boot(): Promise<void> {
   await loadStorage(STORAGE_KEYS);
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
-  const app = new FletchyApp(root, { name: __APP_NAME__, version: __APP_VERSION__, webUrl: __APP_WEB_URL__ });
+  const app = new FletchyApp(root, { name: __APP_NAME__, version: __APP_VERSION__, webUrl: __APP_WEB_URL__, author: __APP_AUTHOR__ });
   window.__fletchy = { ready: true, version: __APP_VERSION__, debug: app.debugApi() };
 
   // Offline support on the web build only; native apps already load from the device.

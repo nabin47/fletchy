@@ -15,6 +15,12 @@ describe('app.config.json', () => {
     expect(pkg.version).toBe(app.version);
   });
 
+  it('has an author for the About screen', () => {
+    const author = app.author as { name: string; intro: string; github: string };
+    expect(author.github).toMatch(/^https:\/\/github\.com\//);
+    expect(author.intro.length).toBeGreaterThan(20);
+  });
+
   it('never uses the dropped working title', () => {
     expect(JSON.stringify(app)).not.toMatch(/arrow\s*rush/i);
   });
