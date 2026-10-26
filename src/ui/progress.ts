@@ -5,11 +5,10 @@ export interface Settings {
   sound: boolean;
   haptics: boolean;
   theme: 'system' | 'dark' | 'light';
-  colorblind: boolean;
   reduceMotion: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { sound: true, haptics: true, theme: 'system', colorblind: false, reduceMotion: false };
+export const DEFAULT_SETTINGS: Settings = { sound: true, haptics: true, theme: 'light', reduceMotion: false };
 export const HINTS_PER_DAY = 3;
 
 export const STORAGE_KEYS = ['settings', 'rushBest', 'daily', 'streak', 'hints', 'tutorialDone'] as const;

@@ -13,42 +13,65 @@ export const SCORING = {
 };
 
 export const RUSH = {
-  cols: 7,
-  rows: 10,
-  startArrows: 10,
+  cols: 9,
+  rows: 13,
+  startArrows: 14,
   hearts: 3,
   maxHearts: 3,
   /** Game over when density is at least this and a wave cannot be placed. */
   overflowDensity: 0.85,
   boardClearBonus: 200,
-  boardClearDelay: 2,
-  spawnBase: 4.2,
-  spawnDecay: 0.97,
-  spawnMin: 1.4,
+  /** Seconds the board may sit below minOnBoard() before the next wave is pulled in early. */
+  catchUpDelay: 0.35,
+  /** Difficulty level gained per second of play... */
+  levelPerSecond: 0.2,
+  /** ...and per wave the player pulled in early by clearing fast. */
+  levelPerEarlyWave: 0.25,
+  /** Arrivals per second at level 0, and growth per level. */
+  baseRate: 0.55,
+  rateGrowth: 1.025,
 };
 
-/** Seconds until the wave after `wave` spawns. */
-export function spawnInterval(wave: number): number {
-  return Math.max(RUSH.spawnMin, RUSH.spawnBase * Math.pow(RUSH.spawnDecay, wave));
+/*
+ * Dynamic difficulty. A level rises steadily with time and jumps a little
+ * every time the player clears the board down early (which also pulls the
+ * next wave in at once, so nobody waits on an empty board). The level sets
+ * how many arrows arrive per second, how long they are and how tangled the
+ * dependency chains get. Fast players climb faster; everyone is eventually
+ * overwhelmed.
+ */
+
+/** Target arrivals per second at a difficulty level. */
+export function arrivalRate(level: number): number {
+  return RUSH.baseRate * Math.pow(RUSH.rateGrowth, level);
 }
 
-/** [min, max] arrows in a wave. Starts at 1..3 and grows slowly. */
-export function waveSizeRange(wave: number): [number, number] {
-  const extra = Math.floor(wave / 12);
-  return [1 + Math.min(2, Math.floor(wave / 8)), 3 + extra];
+/** Seconds until the next timed wave. Waves get closer together but never below 1.5 s. */
+export function spawnInterval(level: number): number {
+  return Math.max(1.5, 3.2 * Math.pow(0.98, level));
 }
 
-export function rushPlacement(wave: number): { len2Prob: number; len3Prob: number; chainBias: number } {
+/** Expected arrows in a wave: rate x interval (the caller rounds stochastically). */
+export function waveSize(level: number): number {
+  return Math.max(1, arrivalRate(level) * spawnInterval(level));
+}
+
+/** Below this many arrows the next wave is pulled in early. */
+export function minOnBoard(level: number): number {
+  return Math.min(16, 5 + Math.floor(level / 3));
+}
+
+export function rushPlacement(level: number): { len2Prob: number; len3Prob: number; chainBias: number } {
   return {
-    len2Prob: 0.4,
-    len3Prob: Math.min(0.4, 0.15 + 0.01 * wave),
-    chainBias: Math.min(0.85, 0.02 * wave),
+    len2Prob: 0.45,
+    len3Prob: Math.min(0.45, 0.2 + 0.005 * level),
+    chainBias: Math.min(0.9, 0.015 * level),
   };
 }
 
 export const DAILY = {
-  cols: 8,
-  rows: 10,
+  cols: 9,
+  rows: 13,
   fill: 0.65,
   hearts: 3,
   salt: 'fletchy-daily-v1',

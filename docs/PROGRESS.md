@@ -36,11 +36,18 @@
 - [x] CI green incl. the API 36 emulator job (run 40181549434)
 - [x] Upload key created (run 40185348922); signed AAB built (run 40185401141, manual dispatch: the session's git proxy cannot push tags)
 
-## Phase 4: Launch prep (in progress)
+## Phase 4: Launch prep (done, PR #7)
 
 - [x] Store text in `app.config.json` (title, short and full description, release notes, screenshot captions) with length checks in unit tests
 - [x] `scripts/make-store-assets.mjs`: 512 icon, 1024x500 feature graphic, 5 captioned 1080x1920 screenshots, listing text, `whatsnew` → `store-listing` CI artifact
 - [x] Release notes passed to the Play upload (`whatsNewDirectory`)
 - [x] `store/DATA_SAFETY.md` (Data safety, content rating, target audience, ads, app access answers)
 - [x] `docs/RELEASE.md`: full owner checklist from account to production
-- [ ] CI green on the Phase 4 PR
+- [x] CI green on the Phase 4 PR (run 40187831487)
+
+## Play-test rework (owner feedback)
+
+- [x] Dynamic difficulty: level from time + early waves, no waiting on an empty board (sim in DECISIONS.md)
+- [x] 9×13 grid, thin arrows, forgiving tap radius
+- [x] Minimal palette (light default + soft dark), new icon/splash/store art, Android resources regenerated
+- [ ] CI green, then the owner re-plays on the phone

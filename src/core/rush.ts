@@ -1,4 +1,4 @@
-import { RUSH, SCORING, rushPlacement, spawnInterval, waveSizeRange } from './config.ts';
+import { RUSH, SCORING, minOnBoard, rushPlacement, spawnInterval, waveSize } from './config.ts';
 import { DEFAULT_PLACEMENT, placeArrow } from './generator.ts';
 import { Grid } from './grid.ts';
 import { mulberry32, type Rng } from './rng.ts';
@@ -14,7 +14,7 @@ export type TapResult =
   | { kind: 'ignored' };
 
 export type RushEvent =
-  | { type: 'spawn'; wave: number; arrows: Arrow[] }
+  | { type: 'spawn'; wave: number; arrows: Arrow[]; early: boolean }
   | { type: 'boardClear'; bonus: number }
   | { type: 'heartRestored'; hearts: number }
   | { type: 'comboExpired' }
@@ -43,6 +43,9 @@ export class RushGame {
   private pending: RushEvent[] = [];
   private readonly rng: Rng;
   private lastCorrectAt = -Infinity;
+  /** When the board dropped below minOnBoard(), or null. */
+  private lowSince: number | null = null;
+  private earlyWaves = 0;
   private readonly waves = new Map<number, WaveTrack>();
   private readonly waveOf = new Map<number, number>();
 
@@ -59,6 +62,11 @@ export class RushGame {
     }
     this.track(0, start);
     this.nextSpawnAt = spawnInterval(0);
+  }
+
+  /** Current difficulty level (see config.ts). */
+  level(): number {
+    return this.time * RUSH.levelPerSecond + this.earlyWaves * RUSH.levelPerEarlyWave;
   }
 
   /** Fraction of the board covered, 0..1 (drives the pressure ring). */
@@ -94,10 +102,11 @@ export class RushGame {
     const points = arrowPoints(arrow.cells.length, this.combo);
     this.score += points;
     this.untrack(id);
+    // Start the catch-up clock at the tap itself, so an emptied board refills promptly.
+    if (this.grid.size < minOnBoard(this.level())) this.lowSince ??= this.time;
 
     if (this.grid.size === 0) {
       this.score += RUSH.boardClearBonus;
-      this.nextSpawnAt += RUSH.boardClearDelay;
       this.pending.push({ type: 'boardClear', bonus: RUSH.boardClearBonus });
     }
     return { kind: 'cleared', arrow, points, combo: this.combo };
@@ -110,15 +119,20 @@ export class RushGame {
     if (this.over) return events;
     this.time += dt;
     if (this.expireCombo()) events.push({ type: 'comboExpired' });
-    while (!this.over && this.time >= this.nextSpawnAt) events.push(...this.spawnWave());
+    if (this.grid.size < minOnBoard(this.level())) this.lowSince ??= this.time;
+    else this.lowSince = null;
+    const early = this.lowSince !== null && this.time - this.lowSince >= RUSH.catchUpDelay;
+    if (!this.over && (early || this.time >= this.nextSpawnAt)) events.push(...this.spawnWave(early && this.time < this.nextSpawnAt));
     return events;
   }
 
-  private spawnWave(): RushEvent[] {
+  private spawnWave(early: boolean): RushEvent[] {
     this.wave++;
-    const [min, max] = waveSizeRange(this.wave);
-    const size = min + this.rng.int(max - min + 1);
-    const placement = { ...DEFAULT_PLACEMENT, ...rushPlacement(this.wave) };
+    if (early) this.earlyWaves++;
+    const level = this.level();
+    const expected = waveSize(level);
+    const size = Math.floor(expected) + (this.rng.chance(expected % 1) ? 1 : 0);
+    const placement = { ...DEFAULT_PLACEMENT, ...rushPlacement(level) };
     const placed: Arrow[] = [];
     let blocked = false;
     for (let i = 0; i < size; i++) {
@@ -130,8 +144,9 @@ export class RushGame {
       placed.push(a);
     }
     this.track(this.wave, placed);
-    this.nextSpawnAt += spawnInterval(this.wave);
-    const events: RushEvent[] = [{ type: 'spawn', wave: this.wave, arrows: placed }];
+    this.nextSpawnAt = this.time + spawnInterval(level);
+    this.lowSince = null;
+    const events: RushEvent[] = [{ type: 'spawn', wave: this.wave, arrows: placed, early }];
     if (blocked && this.grid.density() >= RUSH.overflowDensity) {
       this.end('overflow');
       events.push({ type: 'gameOver', reason: 'overflow' });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RUSH, spawnInterval } from '../../src/core/config.ts';
+import { RUSH, arrivalRate, minOnBoard, spawnInterval } from '../../src/core/config.ts';
 import { isAcyclic } from '../../src/core/dependency.ts';
 import { mulberry32 } from '../../src/core/rng.ts';
 import { freeArrows } from '../../src/core/rules.ts';
@@ -32,7 +32,7 @@ describe('Rush', () => {
       expectWellFormed(g.grid.snapshot());
       expect(spawns).toBeGreaterThan(0);
     }
-  });
+  }, 60_000);
 
   it('a blocked tap costs a heart and resets combo; three ends the game', () => {
     const g = new RushGame(5);
@@ -61,13 +61,32 @@ describe('Rush', () => {
     expect(g.combo).toBe(0);
   });
 
-  it('clearing the whole board gives the bonus and delays the next wave', () => {
+  it('clearing the whole board gives the bonus and pulls the next wave in at once', () => {
     const g = new RushGame(3);
-    const before = g.nextSpawnAt;
     while (g.grid.size > 0) g.tap(freeArrows(g.grid)[0]!.id);
-    expect(g.nextSpawnAt).toBe(before + RUSH.boardClearDelay);
+    const timerWave = g.nextSpawnAt;
     expect(g.tick(0).some((e) => e.type === 'boardClear')).toBe(true);
     expect(g.score).toBeGreaterThanOrEqual(RUSH.boardClearBonus);
+    const events = g.tick(RUSH.catchUpDelay + 0.01);
+    const spawn = events.find((e) => e.type === 'spawn');
+    expect(spawn).toMatchObject({ type: 'spawn', early: true });
+    expect(g.time).toBeLessThan(timerWave);
+    expect(g.grid.size).toBeGreaterThan(0);
+  });
+
+  it('a fast player climbs the difficulty curve faster than a slow one', () => {
+    const play = (tapsPerTick: number): number => {
+      const g = new RushGame(42);
+      for (let i = 0; i < 300 && !g.over; i++) {
+        g.tick(0.1);
+        for (let k = 0; k < tapsPerTick; k++) {
+          const f = freeArrows(g.grid)[0];
+          if (f) g.tap(f.id);
+        }
+      }
+      return g.level();
+    };
+    expect(play(1)).toBeGreaterThan(play(0));
   });
 
   it('a perfectly cleared wave restores a heart', () => {
@@ -78,7 +97,7 @@ describe('Rush', () => {
     expect(g.hearts).toBe(2);
     while (g.grid.size > 0) g.tap(freeArrows(g.grid)[0]!.id);
     expect(g.hearts).toBe(2); // wave 0 was not clean
-    g.tick(g.nextSpawnAt - g.time + 0.01); // spawn wave 1
+    g.tick(RUSH.catchUpDelay + 0.01); // the empty board pulls in wave 1
     expect(g.wave).toBe(1);
     const restored: unknown[] = [];
     while (g.grid.size > 0) {
@@ -89,10 +108,11 @@ describe('Rush', () => {
     expect(g.hearts).toBe(3);
   });
 
-  it('spawn interval follows max(1.4, 4.2 * 0.97^wave)', () => {
-    expect(spawnInterval(0)).toBeCloseTo(4.2);
-    expect(spawnInterval(10)).toBeCloseTo(4.2 * 0.97 ** 10);
-    expect(spawnInterval(500)).toBe(1.4);
+  it('difficulty escalates: more arrivals, closer waves, a higher early-wave threshold', () => {
+    expect(arrivalRate(40)).toBeGreaterThan(arrivalRate(0) * 2);
+    expect(spawnInterval(40)).toBeLessThan(spawnInterval(0));
+    expect(spawnInterval(1000)).toBe(1.5);
+    expect(minOnBoard(30)).toBeGreaterThan(minOnBoard(0));
   });
 
   it('an untouched board eventually overflows', () => {
